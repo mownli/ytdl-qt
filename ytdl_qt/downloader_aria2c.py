@@ -11,26 +11,32 @@ from ytdl_qt import utils
 
 class DownloaderAria2c(DownloaderAbstract):
 
-	def __init__(self, ytdl):
+	def __init__(self, ytdl, com):
 		logging.debug('Instantiating DownloaderAria2c')
-		super().__init__(ytdl)
-		self._child_d = None
+
+		assert com.set_pbar_max_cb is not None
+		assert com.show_msg_cb is not None
+		assert com.release_ui_cb is not None
+		assert com.ready_for_playback_cb is not None
+
+		super().__init__(ytdl, com)
+		self._child = None
 		self._cancel_flag = False
 		self._merging = False
 		self._files_to_merge = []
 		self._final_filepath = None
 
 	def _setup_ui(self):
-		self.com.set_pbar_max_signal.emit(0)
-		self.com.show_msg_signal.emit('Downloading target')
+		self.com.set_pbar_max_cb(0)
+		self.com.show_msg_cb('Downloading target')
 
 	def _release_ui(self, msg):
-		self.com.show_msg_signal.emit(msg)
-		self.com.release_signal.emit()
+		self.com.show_msg_cb(msg)
+		self.com.release_ui_cb()
 
 	def download_start(self):
 		"""Download with aria2 (doesn't block)."""
-		assert self._child_d is None
+		assert self._child is None
 		self._setup_ui()
 
 		cmd = [
@@ -60,7 +66,7 @@ class DownloaderAria2c(DownloaderAbstract):
 		subproc = QProcess()
 		subproc.finished.connect(self._download_finish)
 		subproc.start(cmd[0], cmd[1:])
-		if not subproc.waitForStarted(self.process_timeout): # timeout in ms
+		if not subproc.waitForStarted(self.process_timeout):  # timeout in ms
 			subproc.kill()
 			self._release_ui('Download error')
 			raise Exception('aria2c execution error')
@@ -68,21 +74,21 @@ class DownloaderAria2c(DownloaderAbstract):
 			subproc.write(aria2_input.encode())
 			subproc.closeWriteChannel()
 
-		self._child_d = subproc
+		self._child = subproc
 
 	def download_cancel(self):
-		assert self._child_d is not None
+		assert self._child is not None
 		self._cancel_flag = True
-		self._child_d.terminate()
+		self._child.terminate()
 		logging.debug('Sent SIGTERM to subprocess')
 		self._release_ui('Cancelled')
 
 	def _download_finish(self):
 		if not self._cancel_flag:
-			ret = self._child_d.exitCode()
+			ret = self._child.exitCode()
 			if ret == 0:
 				def good_end():
-					self.com.ready_for_playback_signal.emit(self._final_filepath)
+					self.com.ready_for_playback_cb(self._final_filepath)
 					self._release_ui('Download Finished')
 
 				if self._merging:
@@ -107,7 +113,7 @@ class DownloaderAria2c(DownloaderAbstract):
 		"""Merge outputs."""
 		assert self._files_to_merge
 		self._merging = True
-		self.com.show_msg_signal.emit('Merging files')
+		self.com.show_msg_cb('Merging files')
 
 		filepath = ''.join(list(self._ytdl.get_filename()))
 		cmd = utils.build_ffmpeg_cmd(self._files_to_merge, output_file=filepath)
@@ -116,16 +122,10 @@ class DownloaderAria2c(DownloaderAbstract):
 		subproc = QProcess()
 		subproc.finished.connect(self._download_finish)
 		subproc.start(cmd[0], cmd[1:])
-		if not subproc.waitForStarted(self.process_timeout): # timeout in ms
+		if not subproc.waitForStarted(self.process_timeout):  # timeout in ms
 			subproc.kill()
 			self._release_ui('FFMPEG execution error')
 			# TODO: error
 			# raise Exception('FFMPEG execution error')
-		self._child_d = subproc
+		self._child = subproc
 		self._final_filepath = filepath
-
-	def stream_start(self):
-		raise Exception('Not eligible for streaming')
-
-	def _stream_finish(self):
-		raise Exception('Not eligible for streaming')

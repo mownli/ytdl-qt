@@ -268,20 +268,6 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="outputTab">
-       <attribute name="title">
-        <string>Output</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout">
-        <item>
-         <widget class="QTextBrowser" name="outputBrowser">
-          <property name="documentTitle">
-           <string/>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
      </widget>
     </item>
    </layout>

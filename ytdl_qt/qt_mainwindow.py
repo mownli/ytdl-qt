@@ -16,10 +16,12 @@ from PyQt5.QtWidgets import (
 
 from ytdl_qt.downloader_aria2c import DownloaderAria2c
 from ytdl_qt.downloader_ffmpeg import DownloaderFfmpeg
+from ytdl_qt.streamer_ffmpeg import StreamerFfmpeg
 from ytdl_qt.downloader_ytdl import DownloaderYtdl
 from ytdl_qt.qt_historytablemodel import HistoryTableModel
 from ytdl_qt.qt_mainwindow_form import Ui_MainWindow
 from ytdl_qt.ytdl import Ytdl
+from ytdl_qt.executor_abstract import Com
 from ytdl_qt import utils
 
 
@@ -37,9 +39,9 @@ class MainWindow(QMainWindow):
 
 		self.ytdl = Ytdl()
 
-		self._progressBar = QProgressBar()
-		self.statusBar().addPermanentWidget(self._progressBar)
-		self._progressBar.setVisible(False)
+		self.progressBar = QProgressBar()
+		self.statusBar().addPermanentWidget(self.progressBar)
+		self.progressBar.setVisible(False)
 		self.ui.ytdlRadio.setChecked(True)
 		self.ui.urlEdit.setFocus()
 		self.setWindowTitle(self.WINDOW_TITLE)
@@ -61,6 +63,13 @@ class MainWindow(QMainWindow):
 
 		self._downloader = None
 		self._streamer_list = []
+
+		self.com = Com()
+		self.com.set_pbar_max_cb = self.progressBar.setMaximum
+		self.com.set_pbar_value_cb = self.progressBar.setValue
+		self.com.show_msg_cb = self.statusBar().showMessage
+		self.com.release_ui_cb = self.release_ui
+		self.com.ready_for_playback_cb = self.set_playback_enabled
 
 		try:
 			self._load_history(utils.Paths.get_history())
@@ -135,7 +144,7 @@ class MainWindow(QMainWindow):
 			self.ui.historyView.doubleClicked.connect(self.history_item_clicked_slot)
 		self.history_signal_connected = True
 		self.setWindowTitle(self.WINDOW_TITLE + ' :: ' + self.ytdl.get_title())
-		self._progressBar.setVisible(False)
+		self.progressBar.setVisible(False)
 
 	def _update_table(self):
 		"""Update table contents."""
@@ -218,17 +227,11 @@ class MainWindow(QMainWindow):
 		# 	return
 
 		if self.ui.ytdlRadio.isChecked():
-			self._downloader = DownloaderYtdl(self.ytdl)
+			self._downloader = DownloaderYtdl(self.ytdl, self.com)
 		elif self.ui.ffmpegRadio.isChecked():
-			self._downloader = DownloaderFfmpeg(self.ytdl)
+			self._downloader = DownloaderFfmpeg(self.ytdl, self.com)
 		elif self.ui.aria2Radio.isChecked():
-			self._downloader = DownloaderAria2c(self.ytdl)
-
-		self._downloader.com.set_pbar_max_signal.connect(self._progressBar.setMaximum)
-		self._downloader.com.set_pbar_value_signal.connect(self._progressBar.setValue)
-		self._downloader.com.show_msg_signal.connect(self.statusBar().showMessage)
-		self._downloader.com.release_signal.connect(self.release_ui)
-		self._downloader.com.ready_for_playback_signal.connect(self.set_playback_enabled)
+			self._downloader = DownloaderAria2c(self.ytdl, self.com)
 
 		try:
 			self.ytdl.set_format(self._get_selected_fmt_id_list())
@@ -246,7 +249,7 @@ class MainWindow(QMainWindow):
 			self.setWindowTitle(
 				self.WINDOW_TITLE + ' :: Downloading :: ' + self.ytdl.get_title()
 			)
-			self._progressBar.setVisible(True)
+			self.progressBar.setVisible(True)
 
 			self._downloader.download_start()
 		except Exception as e:
@@ -259,7 +262,7 @@ class MainWindow(QMainWindow):
 
 	def streamButton_clicked_slot(self):
 		"""Qt slot. Use FFmpeg downloader to stream selected items."""
-		self._streamer_list.append(DownloaderFfmpeg(self.ytdl))
+		self._streamer_list.append(StreamerFfmpeg(self.ytdl, self.com))
 		try:
 			self.ytdl.set_format(self._get_selected_fmt_id_list())
 			# self._streamer_list[-1].stream_start()

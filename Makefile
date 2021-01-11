@@ -9,6 +9,7 @@ pyz: $(SRCDIR)
 	cp -r $(SRCDIR)/* -t $(BUILDDIR)
 	cd $(BUILDDIR); find . -type f -exec sed -i "s/from ytdl_qt\./from /g" {} +
 	cd $(BUILDDIR); find . -type f -exec sed -i "s/from ytdl_qt //g" {} +
+	cd $(BUILDDIR); find . -type d -name "__pycache__" -exec rm -rf {} +
 	cd $(BUILDDIR); zip -q tmp.zip *
 	echo "#!$(PYTHON)" > $(BUILDDIR)/$(TARGET)
 	cat $(BUILDDIR)/tmp.zip >> $(BUILDDIR)/$(TARGET)
