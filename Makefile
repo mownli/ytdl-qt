@@ -7,6 +7,7 @@ BUILDDIR=build
 pyz: $(SRCDIR)
 	mkdir -p $(BUILDDIR)
 	cp -r $(SRCDIR)/* -t $(BUILDDIR)
+	cd $(BUILDDIR); find . -type f -exec sed -i "s/import ytdl_qt\./import /g" {} +
 	cd $(BUILDDIR); find . -type f -exec sed -i "s/from ytdl_qt\./from /g" {} +
 	cd $(BUILDDIR); find . -type f -exec sed -i "s/from ytdl_qt //g" {} +
 	cd $(BUILDDIR); find . -type d -name "__pycache__" -exec rm -rf {} +

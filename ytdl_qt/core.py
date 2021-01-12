@@ -16,7 +16,7 @@ from ytdl_qt import utils
 
 class Core:
 
-	WINDOW_TITLE = 'ytdl-qt'
+	window_title = 'ytdl-qt'
 
 	def __init__(self, url):
 
@@ -25,7 +25,7 @@ class Core:
 		self.streamer_list = []
 
 		self.ui = self.make_ui()
-		self.ui.set_window_title(self.WINDOW_TITLE)
+		self.ui.set_window_title(self.window_title)
 		self.ui.show()
 		self.exec_comm = self.make_exec_comm()
 
@@ -59,7 +59,7 @@ class Core:
 
 	def make_ui(self):
 		mw_comm = MainWindow.Comm()
-		mw_comm.get_info_cb = self.download_info  # (url)
+		mw_comm.get_info_cb = self.download_info
 		mw_comm.is_d_blocked_cb = self.is_d_blocked
 		mw_comm.download_cb = self.download_target
 		mw_comm.cancelled_cb = self.download_cancel
@@ -84,7 +84,7 @@ class Core:
 			self.file_for_playback = None
 			self.ui.update_table(self.ytdl.get_info())
 			self.ui.playButton_set_disabled()
-			self.ui.set_window_title(self.WINDOW_TITLE + ' :: ' + self.ytdl.get_title())
+			self.ui.set_window_title(self.window_title + ' :: ' + self.ytdl.get_title())
 			self.ui.show_status_msg('Info loaded')
 
 			self.ui.history_add_item(self.ytdl.get_title(), url)
@@ -103,7 +103,7 @@ class Core:
 
 	def release_ui(self):
 		self.d_blocked = False
-		self.ui.set_window_title(self.WINDOW_TITLE + ' :: ' + self.ytdl.get_title())
+		self.ui.set_window_title(self.window_title + ' :: ' + self.ytdl.get_title())
 		self.ui.release_ui()
 
 	def load_history(self, path):
@@ -137,7 +137,7 @@ class Core:
 			self.d_blocked = True
 			self.ui.setup_ui_for_download()
 			self.ui.set_window_title(
-				self.WINDOW_TITLE + ' :: Downloading :: ' + self.ytdl.get_title()
+				self.window_title + ' :: Downloading :: ' + self.ytdl.get_title()
 			)
 			self.downloader.download_start()
 		except Exception as e:

@@ -34,7 +34,7 @@ def build_ffmpeg_cmd(url_list, output_file=None, flv=False, force_ow=True, quiet
 	else:
 		ffmpeg_cmd.append('-n')
 	for item in url_list:
-		ffmpeg_cmd += ['-i', item]
+		ffmpeg_cmd += ['-i', f"\"{item}\""]
 	url_list_len = len(url_list)
 	if url_list_len > 1:
 		for i in range(0, url_list_len):

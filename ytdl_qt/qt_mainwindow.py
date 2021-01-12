@@ -2,6 +2,7 @@
 
 import logging
 import re
+from typing import Callable
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -18,16 +19,16 @@ from ytdl_qt.ytdl import Ytdl
 
 class MainWindow(QMainWindow):
 
-	ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+	ansi_esc = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 	class Comm:
 
-		get_info_cb = None  # (url)
-		is_d_blocked_cb = None
-		download_cb = None
-		cancelled_cb = None
-		stream_cb = None
-		play_cb = None
+		get_info_cb = Callable[[str], None]  # (url)
+		is_d_blocked_cb = Callable[[], None]
+		download_cb = Callable[[], None]
+		cancelled_cb = Callable[[], None]
+		stream_cb = Callable[[], None]
+		play_cb = Callable[[], None]
 
 	def __init__(self, comm):
 		"""Create MainWindow."""
@@ -114,7 +115,7 @@ class MainWindow(QMainWindow):
 		dialog = QMessageBox()
 		dialog.setIcon(severity)
 		# For cleaning ANSI stuff from exception messages
-		msg_clean = MainWindow.ANSI_ESCAPE.sub('', msg)
+		msg_clean = MainWindow.ansi_esc.sub('', msg)
 		dialog.setText(msg_clean)
 		dialog.setWindowTitle(status_str)
 		dialog.exec_()

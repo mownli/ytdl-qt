@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
 from abc import ABC, abstractmethod
+from typing import Callable
 
 
 class Comm:
 
-	set_pbar_max_cb = None  # (value)
-	set_pbar_value_cb = None  # (value)
-	show_msg_cb = None  # (msg)
-	release_ui_cb = None
-	ready_for_playback_cb = None   # (filepath)
+	set_pbar_max_cb = Callable[[int], None]  # (value)
+	set_pbar_value_cb = Callable[[int], None]  # (value)
+	show_msg_cb = Callable[[str], None]  # (msg)
+	release_ui_cb = Callable[[], None]
+	ready_for_playback_cb = Callable[[str], None]   # (filepath)
 	# TODO: add error signal
 
 
