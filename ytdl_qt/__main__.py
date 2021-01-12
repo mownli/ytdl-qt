@@ -8,6 +8,7 @@ import sys
 from PyQt5.QtWidgets import QApplication
 from pyperclip import paste
 
+from ytdl_qt.core import Core
 from ytdl_qt import utils
 from ytdl_qt.qt_mainwindow import MainWindow
 
@@ -48,8 +49,7 @@ def main():
 
 	check_ffmpeg()
 
-	widget = MainWindow(url)
-	widget.show()
+	Core(url)
 
 	sys.exit(app.exec_())
 

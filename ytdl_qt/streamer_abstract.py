@@ -7,8 +7,8 @@ from ytdl_qt.executor_abstract import ExecutorAbstract
 
 class StreamerAbstract(ExecutorAbstract):
 
-	def __init__(self, ytdl, com):
-		super().__init__(ytdl, com)
+	def __init__(self, ytdl, comm):
+		super().__init__(ytdl, comm)
 
 	@abstractmethod
 	def stream_start(self):

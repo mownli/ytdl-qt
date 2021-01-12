@@ -9,25 +9,25 @@ from ytdl_qt import utils
 
 
 class DownloaderFfmpeg(DownloaderAbstract):
-	def __init__(self, ytdl, com):
+	def __init__(self, ytdl, comm):
 		logging.debug('Instantiating DownloaderFfmpeg')
 
-		assert com.set_pbar_max_cb is not None
-		assert com.show_msg_cb is not None
-		assert com.release_ui_cb is not None
-		assert com.ready_for_playback_cb is not None
+		assert comm.set_pbar_max_cb is not None
+		assert comm.show_msg_cb is not None
+		assert comm.release_ui_cb is not None
+		assert comm.ready_for_playback_cb is not None
 
-		super().__init__(ytdl, com)
+		super().__init__(ytdl, comm)
 		self._child = None
 		self._cancel_flag = False
 
 	def _setup_ui(self):
-		self.com.set_pbar_max_cb(0)
-		self.com.show_msg_cb('Downloading target')
+		self.comm.set_pbar_max_cb(0)
+		self.comm.show_msg_cb('Downloading target')
 
 	def _release_ui(self, msg):
-		self.com.show_msg_cb(msg)
-		self.com.release_ui_cb()
+		self.comm.show_msg_cb(msg)
+		self.comm.release_ui_cb()
 
 	def download_start(self):
 		"""Download with ffmpeg. Useful for m3u8 protocol. Doesn't block."""
@@ -50,7 +50,7 @@ class DownloaderFfmpeg(DownloaderAbstract):
 			raise Exception('FFmpeg execution error')
 		self._child = subproc
 
-		self.com.ready_for_playback_cb(filepath)
+		self.comm.ready_for_playback_cb(filepath)
 
 	def download_cancel(self):
 		assert self._child is not None

@@ -10,28 +10,28 @@ from ytdl_qt import utils
 
 
 class StreamerFfmpeg(StreamerAbstract):
-	def __init__(self, ytdl, com):
+	def __init__(self, ytdl, comm):
 		logging.debug('Instantiating StreamerFfmpeg')
 
-		assert com.show_msg_cb is not None
-		assert com.release_ui_cb is not None
-		assert com.set_pbar_max_cb is not None
+		assert comm.show_msg_cb is not None
+		assert comm.release_ui_cb is not None
+		assert comm.set_pbar_max_cb is not None
 
-		super().__init__(ytdl, com)
+		super().__init__(ytdl, comm)
 		self._children = []
 
 	def _setup_ui(self):
-		self.com.show_msg_cb('Streaming target')
+		self.comm.show_msg_cb('Streaming target')
 
 	def _release_ui(self, msg):
-		self.com.show_msg_cb(msg)
-		self.com.release_ui_cb()
+		self.comm.show_msg_cb(msg)
+		self.comm.release_ui_cb()
 
 	def stream_start(self):
 		assert not self._children
 
 		self._setup_ui()
-		self.com.set_pbar_max_cb(0)
+		self.comm.set_pbar_max_cb(0)
 
 		url_list = self._ytdl.get_url_selection()
 		protocol_list = self._ytdl.get_protocol_selection()

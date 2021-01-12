@@ -3,12 +3,13 @@
 from abc import ABC, abstractmethod
 
 
-class Com:
-	set_pbar_max_cb = None
-	set_pbar_value_cb = None
-	show_msg_cb = None
+class Comm:
+
+	set_pbar_max_cb = None  # (value)
+	set_pbar_value_cb = None  # (value)
+	show_msg_cb = None  # (msg)
 	release_ui_cb = None
-	ready_for_playback_cb = None
+	ready_for_playback_cb = None   # (filepath)
 	# TODO: add error signal
 
 
@@ -16,9 +17,9 @@ class ExecutorAbstract(ABC):
 
 	process_timeout = 5000  # ms
 
-	def __init__(self, ytdl, com):
+	def __init__(self, ytdl, comm):
 		self._ytdl = ytdl
-		self.com = com
+		self.comm = comm
 
 	@abstractmethod
 	def _setup_ui(self):
@@ -26,4 +27,4 @@ class ExecutorAbstract(ABC):
 
 	@abstractmethod
 	def _release_ui(self, msg):
-		self.com.release_ui_cb()
+		self.comm.release_ui_cb()
