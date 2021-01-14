@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import logging
+import subprocess
+import threading
 
-from PyQt5.QtCore import QProcess
+# from PyQt5.QtCore import QProcess
 
 from ytdl_qt.downloader_abstract import DownloaderAbstract
 from ytdl_qt import utils
@@ -39,16 +41,24 @@ class DownloaderFfmpeg(DownloaderAbstract):
 		ext = '.mkv'
 		filepath = ''.join([path, ext])
 		cmd = utils.build_ffmpeg_cmd(self._ytdl.get_url_selection(), output_file=filepath)
-		logging.debug(f"Command line {cmd}")
+		logging.debug(f"Command line: {' '.join(cmd)}")
+		# logging.debug(f"Command line: {cmd}")
 
-		subproc = QProcess()
-		subproc.finished.connect(self._download_finish)
-		subproc.start(cmd[0], cmd[1:])
-		if not subproc.waitForStarted(self.process_timeout):
-			subproc.kill()
-			self._release_ui('Download error')
-			raise Exception('FFmpeg execution error')
+		# subproc = QProcess()
+		# subproc.finished.connect(self._download_finish)
+		# subproc.start(cmd[0], cmd[1:])
+		# if not subproc.waitForStarted(self.process_timeout):
+		# 	subproc.kill()
+		# 	self._release_ui('Download error')
+		# 	raise Exception('FFmpeg execution error')
+
+		#subproc = subprocess.Popen(' '.join(cmd), shell=True)
+		subproc = subprocess.Popen(cmd)
+
 		self._child = subproc
+
+		self._monitor = threading.Thread(target=self._download_finish, daemon=True)
+		self._monitor.start()
 
 		self.comm.ready_for_playback_cb(filepath)
 
@@ -59,12 +69,20 @@ class DownloaderFfmpeg(DownloaderAbstract):
 		logging.debug('Sent SIGTERM to subprocess')
 		self._release_ui('Cancelled')
 
+	# def _download_finish(self):
+	# 	# Relies on QProcess
+	# 	if not self._cancel_flag:
+	# 		ret = self._child.exitCode()
+	# 		if ret == 0:
+	# 			self._release_ui('Download Finished')
+	# 		else:
+	# 			self._release_ui(f'FFmpeg Error. Exit code {ret}')
+
 	def _download_finish(self):
+		self._child.wait()
 		if not self._cancel_flag:
-			ret = self._child.exitCode()
+			ret = self._child.returncode
 			if ret == 0:
 				self._release_ui('Download Finished')
 			else:
 				self._release_ui(f'FFmpeg Error. Exit code {ret}')
-				# TODO: error
-				# raise Exception(f'FFMPEG Error. Exit code {ret}')

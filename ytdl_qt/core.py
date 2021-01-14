@@ -147,7 +147,7 @@ class Core:
 		self.streamer_list.append(StreamerFfmpeg(self.ytdl, self.exec_comm))
 		try:
 			self.ytdl.set_format(self.ui.get_selected_fmt_id_list())
-			# self._streamer_list[-1].stream_start()
+			# self.streamer_list[-1].stream_start()
 			self.streamer_list[-1].stream_start_detached()
 		except Exception as e:
 			self.ui.error_dialog_exec('Error', str(e))

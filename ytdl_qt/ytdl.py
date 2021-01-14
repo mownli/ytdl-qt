@@ -53,7 +53,7 @@ class Ytdl(YoutubeDL):
 		YoutubeDL.__init__(self, params=params)
 		self._info = None
 		self._current_url = None
-		self._fmt_id_selection = []
+		self.fmt_id_selection = []
 		self._number_of_files_to_download = 0
 
 	def download_info(self, url):
@@ -90,7 +90,7 @@ class Ytdl(YoutubeDL):
 				raise Exception('Unacceptable formats. Permitted combinations: video, audio, audio+video')
 		logging.debug(f"fmt_str: {fmt_str}")
 		self.params[self.Keys.format_requested] = fmt_str
-		self._fmt_id_selection = fmt_id_list
+		self.fmt_id_selection = fmt_id_list
 		if len(fmt_id_list) == 0:
 			self._number_of_files_to_download = 1
 		else:
@@ -165,7 +165,7 @@ class Ytdl(YoutubeDL):
 		return info_list
 
 	def get_url_selection(self):
-		return self.get_url_list_by_ids(self._fmt_id_selection)
+		return self.get_url_list_by_ids(self.fmt_id_selection)
 
 	def get_url_list_by_ids(self, fmt_id_list):
 		"""Return list of urls given the list of format ids."""
@@ -180,7 +180,7 @@ class Ytdl(YoutubeDL):
 		return url_list
 
 	def get_protocol_selection(self):
-		return self._get_protocol_list_by_ids(self._fmt_id_selection)
+		return self._get_protocol_list_by_ids(self.fmt_id_selection)
 
 	def _get_protocol_list_by_ids(self, fmt_id_list):
 		"""Return list of protocols given the list of format ids."""

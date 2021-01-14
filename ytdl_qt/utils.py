@@ -23,7 +23,7 @@ def check_dict_attribute(item, key):
 		return False
 
 
-def build_ffmpeg_cmd(url_list, output_file=None, flv=False, force_ow=True, quiet=False):
+def build_ffmpeg_cmd(url_list, output_file=None, flv=False, force_ow=True, quiet=False, protected_args=False):
 	"""Return list with arguments for ffmpeg execution."""
 	assert len(url_list) > 0
 	ffmpeg_cmd = ['ffmpeg', '-hide_banner', '-nostdin']
@@ -34,7 +34,7 @@ def build_ffmpeg_cmd(url_list, output_file=None, flv=False, force_ow=True, quiet
 	else:
 		ffmpeg_cmd.append('-n')
 	for item in url_list:
-		ffmpeg_cmd += ['-i', f"\"{item}\""]
+		ffmpeg_cmd += ['-i', f"\"{item}\"" if protected_args else item]
 	url_list_len = len(url_list)
 	if url_list_len > 1:
 		for i in range(0, url_list_len):
@@ -48,7 +48,7 @@ def build_ffmpeg_cmd(url_list, output_file=None, flv=False, force_ow=True, quiet
 		else:
 			ffmpeg_cmd += ['-f', 'matroska', '-']
 	else:
-		ffmpeg_cmd.append(output_file)
+		ffmpeg_cmd.append(f"\"{output_file}\"" if protected_args else output_file)
 	return ffmpeg_cmd
 
 
