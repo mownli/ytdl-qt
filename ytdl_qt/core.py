@@ -20,7 +20,8 @@ from ytdl_qt.history import History
 class Core:
 
 	window_title = 'ytdl-qt'
-	window_icon = "ytdl.svg"
+	window_icon = 'ytdl.svg'
+	resources_pkg = 'resources'
 
 	def __init__(self, url):
 
@@ -66,8 +67,7 @@ class Core:
 
 		mw = MainWindow(mw_comm)
 		mw.set_window_title(self.window_title)
-
-		data = pkgutil.get_data(__name__, 'ytdl_qt_resources/ytdl.svg')
+		data = pkgutil.get_data(__name__, f'{self.resources_pkg}/{self.window_icon}')
 		px = QPixmap()
 		px.loadFromData(data)
 		mw.setWindowIcon(QIcon(px))
