@@ -2,21 +2,25 @@
 
 import logging
 import subprocess
+import pkgutil
 
-import ytdl_qt.executor_abstract as ExAbs
+from PyQt5.QtGui import QIcon, QPixmap
+
+import ytdl_qt.executor_abstract as ExecutorAbstract
 from ytdl_qt.streamer_ffmpeg import StreamerFfmpeg
 from ytdl_qt.downloader_aria2c import DownloaderAria2c
 from ytdl_qt.downloader_ffmpeg import DownloaderFfmpeg
 from ytdl_qt.downloader_ytdl import DownloaderYtdl
-from ytdl_qt.qt_historytablemodel import HistoryTableModel
 from ytdl_qt.ytdl import Ytdl
 from ytdl_qt.qt_mainwindow import MainWindow
 from ytdl_qt import utils
+from ytdl_qt.history import History
 
 
 class Core:
 
 	window_title = 'ytdl-qt'
+	window_icon = "ytdl.svg"
 
 	def __init__(self, url):
 
@@ -24,19 +28,13 @@ class Core:
 		self.downloader = None
 		self.streamer_list = []
 
-		self.ui = self.make_ui()
-		self.ui.set_window_title(self.window_title)
+		self.ui = self.make_qt_ui()
 		self.ui.show()
+		self.load_history()
 		self.exec_comm = self.make_exec_comm()
 
 		self.d_blocked = False
 		self.file_for_playback = None
-
-		try:
-			self.load_history(utils.Paths.get_history())
-		except Exception as e:
-			logging.debug("Failed to load history")
-			raise e
 
 		if url is not None:
 			self.ui.urlEdit_set_text(url)
@@ -49,7 +47,7 @@ class Core:
 			# 	self.ui.urlEdit_set_text(self.url_from_stdin)
 
 	def make_exec_comm(self):
-		ec = ExAbs.Comm()
+		ec = ExecutorAbstract.Comm()
 		ec.set_pbar_max_cb = self.ui.set_progressBar_max  # (value)
 		ec.set_pbar_value_cb = self.ui.set_progressBar_value  # (value)
 		ec.show_msg_cb = self.ui.show_status_msg  # (msg)
@@ -57,7 +55,7 @@ class Core:
 		ec.ready_for_playback_cb = self.set_playback_enabled  # (filepath)
 		return ec
 
-	def make_ui(self):
+	def make_qt_ui(self) -> MainWindow:
 		mw_comm = MainWindow.Comm()
 		mw_comm.get_info_cb = self.download_info
 		mw_comm.is_d_blocked_cb = self.is_d_blocked
@@ -65,9 +63,17 @@ class Core:
 		mw_comm.cancelled_cb = self.download_cancel
 		mw_comm.stream_cb = self.stream_target
 		mw_comm.play_cb = self.play_file
-		return MainWindow(mw_comm)
 
-	def download_info(self, url):
+		mw = MainWindow(mw_comm)
+		mw.set_window_title(self.window_title)
+
+		data = pkgutil.get_data(__name__, 'ytdl_qt_resources/ytdl.svg')
+		px = QPixmap()
+		px.loadFromData(data)
+		mw.setWindowIcon(QIcon(px))
+		return mw
+
+	def download_info(self, url: str):
 		"""
 		Download URL info, update tableWidget and history, reset playback
 		information on success. Blocks UI.
@@ -94,7 +100,7 @@ class Core:
 
 		self.ui.unblock_ui()
 
-	def set_playback_enabled(self, path):
+	def set_playback_enabled(self, path: str):
 		"""Enable playButton for file playback."""
 		logging.debug('')
 		assert path is not None
@@ -106,12 +112,11 @@ class Core:
 		self.ui.set_window_title(self.window_title + ' :: ' + self.ytdl.get_title())
 		self.ui.release_ui()
 
-	def load_history(self, path):
+	def load_history(self):
 		"""Try to load history from path."""
 		logging.debug('Trying to load history')
-
-		history_model = HistoryTableModel(path)
-		self.ui.set_history_model(history_model)
+		hist = History(utils.Paths.get_history())
+		self.ui.set_history(hist)
 		logging.debug('History loaded')
 
 	# def get_info_auto_slot(self):

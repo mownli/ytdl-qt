@@ -3,7 +3,7 @@
 import logging
 import os
 
-# from PyQt5.QtCore import QProcess
+from PyQt5.QtCore import QProcess
 import subprocess
 import threading
 
@@ -32,7 +32,7 @@ class DownloaderAria2c(DownloaderAbstract):
 		self.comm.set_pbar_max_cb(0)
 		self.comm.show_msg_cb('Downloading target')
 
-	def _release_ui(self, msg):
+	def _release_ui(self, msg: str):
 		self.comm.show_msg_cb(msg)
 		self.comm.release_ui_cb()
 
@@ -53,11 +53,9 @@ class DownloaderAria2c(DownloaderAbstract):
 			single = True
 			name, ext = self._ytdl.get_filename()
 			file = name + ext
-			# file = ''.join(list(self._ytdl.get_filename()))
 			self._final_filepath = file
 			url = ''.join(url_list)
 			logging.debug(file)
-			# cmd += ['-o', f"\"{file}\"", f"\"{url}\""]
 			cmd += ['-o', f"{file}", f"{url}"]
 		else:
 			single = False
@@ -70,24 +68,34 @@ class DownloaderAria2c(DownloaderAbstract):
 			cmd += ['-i', '-']
 		logging.debug(f"Command line {' '.join(cmd)}")
 
-		# subproc = QProcess()
-		# subproc.finished.connect(self._download_finish)
-		# subproc.start(cmd[0], cmd[1:])
-		# if not subproc.waitForStarted(self.process_timeout):  # timeout in ms
-		# 	subproc.kill()
-		# 	self._release_ui('Download error')
-		# 	raise Exception('aria2c execution error')
-		# if not single:
-		# 	subproc.write(aria2_input.encode())
-		# 	subproc.closeWriteChannel()
+		# If you use this, comment out self.wait() at the top of self._download_finish
+		# self.exec_qprocess_download(cmd, single, aria2_input)
 
-		#subproc = subprocess.Popen(' '.join(cmd), shell=True, stdin=subprocess.PIPE)
-		subproc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+		self._exec_pyprocess_download(cmd, single, aria2_input)
+
+	def _exec_qprocess_download(self, cmd: list, single: bool, aria2_input: str):
+		subproc = QProcess()
+		subproc.finished.connect(self._download_finish)
+		subproc.start(cmd[0], cmd[1:])
+		if not subproc.waitForStarted(self.process_timeout):  # timeout in ms
+			subproc.kill()
+			self._release_ui('Download error')
+			raise Exception('aria2c execution error')
 		if not single:
-			print(aria2_input)
+			subproc.write(aria2_input.encode())
+			subproc.closeWriteChannel()
+
+		self._child = subproc
+
+	def _exec_pyprocess_download(self, cmd: list, single: bool, aria2_input: str):
+		try:
+			subproc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+		except Exception:
+			self._release_ui('Download error')
+			raise
+		if not single:
 			subproc.communicate(aria2_input.encode())
 			subproc.stdin.close()
-
 		self._child = subproc
 
 		self._monitor = threading.Thread(target=self._download_finish, daemon=True)
@@ -100,36 +108,12 @@ class DownloaderAria2c(DownloaderAbstract):
 		logging.debug('Sent SIGTERM to subprocess')
 		self._release_ui('Cancelled')
 
-	# def _download_finish(self):
-	# 	# Relies on QProcess
-	# 	if not self._cancel_flag:
-	# 		ret = self._child.exitCode()
-	# 		if ret == 0:
-	# 			def good_end():
-	# 				self.comm.ready_for_playback_cb(self._final_filepath)
-	# 				self._release_ui('Download Finished')
-	#
-	# 			if self._merging:
-	# 				for file in self._files_to_merge:
-	# 					os.remove(file)
-	# 					logging.debug(f'Removed temporary file: {file}')
-	# 				good_end()
-	# 			else:
-	# 				if self._files_to_merge:
-	# 					self._merge_files()
-	# 				else:
-	# 					good_end()
-	# 		else:
-	# 			if self._merging:
-	# 				self._release_ui(f'FFmpeg Error. Exit code {ret}')
-	# 			else:
-	# 				self._release_ui(f'aria2c Error. Exit code {ret}')
-
 	def _download_finish(self):
-		self._child.wait()
+		self._child.wait()  # for pyprocess only
 		if not self._cancel_flag:
 			ret = self._child.returncode
 			if ret == 0:
+
 				def good_end():
 					self.comm.ready_for_playback_cb(self._final_filepath)
 					self._release_ui('Download Finished')
@@ -167,11 +151,12 @@ class DownloaderAria2c(DownloaderAbstract):
 		# if not subproc.waitForStarted(self.process_timeout):  # timeout in ms
 		# 	subproc.kill()
 		# 	self._release_ui('FFMPEG execution error')
-		# 	# TODO: error
-		# 	# raise Exception('FFMPEG execution error')
 
-		subproc = subprocess.Popen(' '.join(cmd), shell=True)
-		# subproc = subprocess.Popen(cmd, shell=True)
+		try:
+			subproc = subprocess.Popen(' '.join(cmd), shell=True)
+		except Exception:
+			self._release_ui('Merging error')
+			raise
 
 		self._child = subproc
 

@@ -3,6 +3,7 @@ INSTALLDIR = ~/.local/bin
 PYTHON = /usr/bin/env python3
 SRCDIR = ytdl_qt
 BUILDDIR = build
+FORMSDIR = forms
 
 pyz: $(SRCDIR)
 	mkdir -p "$(BUILDDIR)"
@@ -11,7 +12,7 @@ pyz: $(SRCDIR)
 	find "$(BUILDDIR)" -type f -print0 | xargs -0 sed -i "s/from ytdl_qt\./from /g"
 	find "$(BUILDDIR)" -type f -print0 | xargs -0 sed -i "s/from ytdl_qt //g"
 	find "$(BUILDDIR)" -type d -name "__pycache__" -print0 | xargs -0 rm -rf
-	cd "$(BUILDDIR)"; zip -q tmp.zip *
+	cd "$(BUILDDIR)"; zip -rq tmp.zip *
 	echo "#!$(PYTHON)" > "$(BUILDDIR)/$(TARGET)"
 	cat "$(BUILDDIR)/tmp.zip" >> "$(BUILDDIR)/$(TARGET)"
 	chmod u+x "$(BUILDDIR)/$(TARGET)"
@@ -29,4 +30,4 @@ wheel: $(SRCDIR)
 	python setup.py bdist_wheel
 
 forms:
-	pyuic5 resources/qt_mainwindow_form.ui > "$(SRCDIR)/qt_mainwindow_form.py"
+	pyuic5 "$(FORMSDIR)/qt_mainwindow_form.ui" > "$(SRCDIR)/qt_mainwindow_form.py"

@@ -4,14 +4,12 @@ import logging
 
 from PyQt5.QtCore import QAbstractTableModel, Qt, QModelIndex
 
-from ytdl_qt.history import History
-
 
 class HistoryTableModel(QAbstractTableModel):
 
-	def __init__(self, path_to_history, parent=None):
+	def __init__(self, history, parent=None):
 		super().__init__(parent)
-		self._history = History(path_to_history)
+		self._history = history
 		self._data = self._history.get_data_unique()
 
 	def data(self, index, role=Qt.DisplayRole):

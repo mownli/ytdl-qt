@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
 	QProgressBar
 )
 
+from ytdl_qt.qt_historytablemodel import HistoryTableModel
 from ytdl_qt.qt_mainwindow_form import Ui_MainWindow
 from ytdl_qt.ytdl import Ytdl
 
@@ -149,8 +150,7 @@ class MainWindow(QMainWindow):
 		logging.debug(f"Selected formats {fmt_set}")
 		return list(fmt_set)
 
-	def set_history_model(self, model):
-		self.ui.historyView.setModel(model)
+
 
 	# Qt slots
 	# def get_info_auto_slot(self):
@@ -249,3 +249,7 @@ class MainWindow(QMainWindow):
 
 	def is_aria2_checked(self):
 		return self.ui.aria2Radio.isChecked()
+
+	def set_history(self, hist):
+		self.ui.historyView.setModel(HistoryTableModel(hist))
+
