@@ -61,6 +61,7 @@ class MainWindow(QMainWindow):
 		self.ui.downloadButton.clicked.connect(self.downloadButton_clicked_slot)
 		self.ui.cancelButton.clicked.connect(self.cancelButton_clicked_slot)
 		self.ui.streamButton.clicked.connect(self.streamButton_clicked_slot)
+		self.ui.infoTableWidget.itemDoubleClicked.connect(self.streamButton_clicked_slot)
 		self.ui.playButton.clicked.connect(self.playButton_clicked_slot)
 		self.ui.historyView.doubleClicked.connect(self.history_item_clicked_slot)
 		self.history_signal_connected = True
@@ -252,4 +253,3 @@ class MainWindow(QMainWindow):
 
 	def set_history(self, hist):
 		self.ui.historyView.setModel(HistoryTableModel(hist))
-
