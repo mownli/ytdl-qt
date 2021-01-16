@@ -2,9 +2,6 @@
 
 import logging
 import subprocess
-import pkgutil
-
-from PyQt5.QtGui import QIcon, QPixmap
 
 from ytdl_qt.executor_abstract import ExecutorAbstract
 from ytdl_qt.streamer_abstract import StreamerAbstract
@@ -22,8 +19,6 @@ from ytdl_qt.history import History
 class Core:
 
 	window_title = 'ytdl-qt'
-	window_icon = 'ytdl.svg'
-	resources_pkg = 'resources'
 
 	def __init__(self, url):
 
@@ -49,20 +44,14 @@ class Core:
 			# 	self.ui.urlEdit_set_text(self.url_from_stdin)
 
 	def make_qt_ui(self) -> MainWindow:
-		mw_comm = MainWindow.Comm()
-		mw_comm.get_info_cb = self.download_info
-		mw_comm.is_d_blocked_cb = self.is_d_blocked
-		mw_comm.download_cb = self.download_target
-		mw_comm.cancelled_cb = self.download_cancel
-		mw_comm.stream_cb = self.stream_target
-		mw_comm.play_cb = self.play_file
-
-		mw = MainWindow(mw_comm)
+		mw = MainWindow()
+		mw.get_info = self.download_info
+		mw.is_d_blocked = self.is_d_blocked
+		mw.download = self.download_target
+		mw.cancelled = self.download_cancel
+		mw.stream = self.stream_target
+		mw.play = self.play_file
 		mw.set_window_title(self.window_title)
-		data = pkgutil.get_data(__name__, f'{self.resources_pkg}/{self.window_icon}')
-		px = QPixmap()
-		px.loadFromData(data)
-		mw.setWindowIcon(QIcon(px))
 		return mw
 
 	def download_info(self, url: str):

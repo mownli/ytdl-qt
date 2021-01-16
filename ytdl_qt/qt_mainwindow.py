@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import logging
+import pkgutil
 import re
-from typing import Callable
+from typing import List
 
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import (
 	QApplication,
 	QMainWindow,
@@ -13,6 +15,7 @@ from PyQt5.QtWidgets import (
 	QProgressBar
 )
 
+from ytdl_qt.history import History
 from ytdl_qt.qt_historytablemodel import HistoryTableModel
 from ytdl_qt.qt_mainwindow_form import Ui_MainWindow
 from ytdl_qt.ytdl import Ytdl
@@ -21,30 +24,20 @@ from ytdl_qt.ytdl import Ytdl
 class MainWindow(QMainWindow):
 
 	ansi_esc = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+	window_icon = 'ytdl.svg'
+	resources_pkg = 'resources'
 
-	class Comm:
-
-		get_info_cb = Callable[[str], None]  # (url)
-		is_d_blocked_cb = Callable[[], None]
-		download_cb = Callable[[], None]
-		cancelled_cb = Callable[[], None]
-		stream_cb = Callable[[], None]
-		play_cb = Callable[[], None]
-
-	def __init__(self, comm):
+	def __init__(self):
 		"""Create MainWindow."""
 		super().__init__()
 
 		self.ui = Ui_MainWindow()
 		self.ui.setupUi(self)
 
-		assert comm.get_info_cb is not None
-		assert comm.is_d_blocked_cb is not None
-		assert comm.download_cb is not None
-		assert comm.cancelled_cb is not None
-		assert comm.stream_cb is not None
-		assert comm.play_cb is not None
-		self.core_comm = comm
+		data = pkgutil.get_data(__name__, f'{self.resources_pkg}/{self.window_icon}')
+		px = QPixmap()
+		px.loadFromData(data)
+		self.setWindowIcon(QIcon(px))
 
 		self.progressBar = QProgressBar()
 		self.statusBar().addPermanentWidget(self.progressBar)
@@ -66,10 +59,28 @@ class MainWindow(QMainWindow):
 		self.ui.historyView.doubleClicked.connect(self.history_item_clicked_slot)
 		self.history_signal_connected = True
 
-	def set_progressBar_max(self, value):
+	def get_info(self, url: str):
+		raise NotImplementedError
+
+	def is_d_blocked(self) -> bool:
+		raise NotImplementedError
+
+	def download(self):
+		raise NotImplementedError
+
+	def cancelled(self):
+		raise NotImplementedError
+
+	def stream(self):
+		raise NotImplementedError
+
+	def play(self):
+		raise NotImplementedError
+
+	def set_progressBar_max(self, value: int):
 		self.progressBar.setMaximum(value)
 
-	def set_progressBar_value(self, value):
+	def set_progressBar_value(self, value: int):
 		self.progressBar.setValue(value)
 
 	def update(self):
@@ -84,10 +95,10 @@ class MainWindow(QMainWindow):
 		"""Unblock UI."""
 		self.block_ui(not yes)
 
-	def show_status_msg(self, msg):
+	def show_status_msg(self, msg: str):
 		self.statusBar().showMessage(msg)
 
-	def update_table(self, fmt_list):
+	def update_table(self, fmt_list: List[str]):
 		"""Update table contents."""
 		self.ui.infoTableWidget.clearContents()
 		self.ui.infoTableWidget.setRowCount(len(fmt_list))
@@ -101,15 +112,15 @@ class MainWindow(QMainWindow):
 	def playButton_set_disabled(self, yes=True):
 		self.ui.playButton.setDisabled(yes)
 
-	def set_window_title(self, title):
+	def set_window_title(self, title: str):
 		self.setWindowTitle(title)
 
-	def history_add_item(self, title, url):
+	def history_add_item(self, title: str, url: str):
 		if self.ui.historyView.model() is not None:
 			self.ui.historyView.model().add_history_item(title, url)
 
 	@staticmethod
-	def error_dialog_exec(status_str, msg, severity=QMessageBox.Critical):
+	def error_dialog_exec(status_str: str, msg: str, severity=QMessageBox.Critical):
 		"""
 		Throw an error dialog.
 		Accepts title string, message string and QMessageBox message type.
@@ -151,8 +162,6 @@ class MainWindow(QMainWindow):
 		logging.debug(f"Selected formats {fmt_set}")
 		return list(fmt_set)
 
-
-
 	# Qt slots
 	# def get_info_auto_slot(self):
 	# 	self.download_info(self.url_from_stdin)
@@ -160,20 +169,20 @@ class MainWindow(QMainWindow):
 	# def urlEdit_get_text(self):
 	# 	return self.ui.urlEdit.text().strip()
 
-	def urlEdit_set_text(self, text):
+	def urlEdit_set_text(self, text: str) -> str:
 		return self.ui.urlEdit.setText(text)
 
 	def getInfoButton_clicked_slot(self):
 		url = self.ui.urlEdit.text().strip()
-		self.core_comm.get_info_cb(url)
+		self.get_info(url)
 
-	def history_item_clicked_slot(self, index):
+	def history_item_clicked_slot(self, index: int):
 		"""Qt slot. Get URl from selected item and call self.download_info()"""
 		assert self.ui.historyView.model() is not None
 		url = self.ui.historyView.model().get_url(index)
 		self.ui.urlEdit.setText(url)
 		self.ui.tabWidget.setCurrentWidget(self.ui.mainTab)
-		self.core_comm.get_info_cb(url)
+		self.get_info(url)
 
 	def urlEdit_textChanged_slot(self):
 		"""Qt slot. Enable getInfoButton if urlEdit is not empty."""
@@ -188,7 +197,7 @@ class MainWindow(QMainWindow):
 		there are selected items in the tableWidget.
 		"""
 		if self.ui.infoTableWidget.selectedItems():
-			if not self.core_comm.is_d_blocked_cb():
+			if not self.is_d_blocked():
 				self.ui.downloadButton.setEnabled(True)
 			self.ui.streamButton.setEnabled(True)
 		else:
@@ -210,25 +219,25 @@ class MainWindow(QMainWindow):
 	def downloadButton_clicked_slot(self):
 		"""Qt slot. Run selected downloader."""
 		logging.debug('')
-		self.core_comm.download_cb()
+		self.download()
 
 	def cancelButton_clicked_slot(self):
 		"""Qt slot. Send cancel signal to running downloader."""
 		logging.debug('')
-		self.core_comm.cancelled_cb()
+		self.cancelled()
 
 	def streamButton_clicked_slot(self):
 		"""Qt slot. Use FFmpeg downloader to stream selected items."""
 		logging.debug('')
-		self.core_comm.stream_cb()
+		self.stream()
 
 	def playButton_clicked_slot(self):
 		"""Qt slot. Start playback of the last downloaded file."""
 		logging.debug('')
-		self.core_comm.play_cb()
+		self.play()
 
 	@staticmethod
-	def filename_collision_dialog_exec():
+	def filename_collision_dialog_exec() -> bool:
 		"""Return True if overwrite is chosen."""
 		dialog = QMessageBox()
 		dialog.setIcon(QMessageBox.Warning)
@@ -242,14 +251,14 @@ class MainWindow(QMainWindow):
 		else:
 			return False
 
-	def is_ytdl_checked(self):
+	def is_ytdl_checked(self) -> bool:
 		return self.ui.ytdlRadio.isChecked()
 
-	def is_ffmpeg_checked(self):
+	def is_ffmpeg_checked(self) -> bool:
 		return self.ui.ffmpegRadio.isChecked()
 
-	def is_aria2_checked(self):
+	def is_aria2_checked(self) -> bool:
 		return self.ui.aria2Radio.isChecked()
 
-	def set_history(self, hist):
+	def set_history(self, hist: History):
 		self.ui.historyView.setModel(HistoryTableModel(hist))

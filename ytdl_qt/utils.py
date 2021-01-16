@@ -85,9 +85,9 @@ class Paths:
 	@staticmethod
 	def get_ffmpeg_exe():
 		if os.name == 'nt':
-			return 'mpv.exe'
+			return 'ffmpeg.exe'
 		else:
-			return 'mpv'
+			return 'ffmpeg'
 
 	@staticmethod
 	def get_aria2c_exe():
