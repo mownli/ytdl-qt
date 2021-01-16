@@ -11,25 +11,15 @@ from ytdl_qt import utils
 
 
 class DownloaderFfmpeg(DownloaderAbstract):
-	def __init__(self, ytdl, comm):
+	def __init__(self, ytdl):
 		logging.debug('Instantiating DownloaderFfmpeg')
-
-		assert comm.set_pbar_max_cb is not None
-		assert comm.show_msg_cb is not None
-		assert comm.release_ui_cb is not None
-		assert comm.ready_for_playback_cb is not None
-
-		super().__init__(ytdl, comm)
+		super().__init__(ytdl)
 		self._child = None
-		self._cancel_flag = False
+		self._cancel_flag: bool = False
 
 	def _setup_ui(self):
-		self.comm.set_pbar_max_cb(0)
-		self.comm.show_msg_cb('Downloading target')
-
-	def _release_ui(self, msg):
-		self.comm.show_msg_cb(msg)
-		self.comm.release_ui_cb()
+		self.set_pbar_max(0)
+		self.show_msg('Downloading target')
 
 	def download_start(self):
 		"""Download with ffmpeg. Useful for m3u8 protocol. Doesn't block."""
@@ -53,21 +43,26 @@ class DownloaderFfmpeg(DownloaderAbstract):
 		# 	raise Exception('FFmpeg execution error')
 
 		#subproc = subprocess.Popen(' '.join(cmd), shell=True)
-		subproc = subprocess.Popen(cmd)
+		try:
+			subproc = subprocess.Popen(cmd)
+			self._child = subproc
+			self._monitor = threading.Thread(target=self._download_finish, daemon=True)
+			self._monitor.start()
+		except Exception as e:
+			self.show_msg('Download error')
+			self.error = str(e)
+			self.finished(self)
+			return
 
-		self._child = subproc
-
-		self._monitor = threading.Thread(target=self._download_finish, daemon=True)
-		self._monitor.start()
-
-		self.comm.ready_for_playback_cb(filepath)
+		self.file_ready_for_playback(filepath)
 
 	def download_cancel(self):
 		assert self._child is not None
 		self._cancel_flag = True
 		self._child.terminate()
 		logging.debug('Sent SIGTERM to subprocess')
-		self._release_ui('Cancelled')
+		self.show_msg('Cancelled')
+		self.finished(self)
 
 	# def _download_finish(self):
 	# 	# Relies on QProcess
@@ -83,6 +78,8 @@ class DownloaderFfmpeg(DownloaderAbstract):
 		if not self._cancel_flag:
 			ret = self._child.returncode
 			if ret == 0:
-				self._release_ui('Download Finished')
+				self.show_msg('Download Finished')
 			else:
-				self._release_ui(f'FFmpeg Error. Exit code {ret}')
+				self.show_msg('Download error')
+				self.error = f'FFmpeg Error. Exit code {ret}'
+			self.finished(self)

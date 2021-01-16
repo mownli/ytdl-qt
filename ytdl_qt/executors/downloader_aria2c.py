@@ -2,6 +2,7 @@
 
 import logging
 import os
+from typing import List
 
 from PyQt5.QtCore import QProcess
 import subprocess
@@ -13,28 +14,18 @@ from ytdl_qt import utils
 
 class DownloaderAria2c(DownloaderAbstract):
 
-	def __init__(self, ytdl, comm):
+	def __init__(self, ytdl):
 		logging.debug('Instantiating DownloaderAria2c')
-
-		assert comm.set_pbar_max_cb is not None
-		assert comm.show_msg_cb is not None
-		assert comm.release_ui_cb is not None
-		assert comm.ready_for_playback_cb is not None
-
-		super().__init__(ytdl, comm)
+		super().__init__(ytdl)
 		self._child = None
 		self._cancel_flag = False
 		self._merging = False
-		self._files_to_merge = []
-		self._final_filepath = None
+		self._files_to_merge: List[str] = []
+		self._final_filepath: str = ''
 
 	def _setup_ui(self):
-		self.comm.set_pbar_max_cb(0)
-		self.comm.show_msg_cb('Downloading target')
-
-	def _release_ui(self, msg: str):
-		self.comm.show_msg_cb(msg)
-		self.comm.release_ui_cb()
+		self.set_pbar_max(0)
+		self.show_msg('Downloading target')
 
 	def download_start(self):
 		"""Download with aria2 (doesn't block)."""
@@ -46,7 +37,7 @@ class DownloaderAria2c(DownloaderAbstract):
 			'--summary-interval=1', '--enable-color=false', '--file-allocation=falloc'
 		]
 
-		url_list = self._ytdl.get_url_selection()
+		url_list: List[str] = self._ytdl.get_url_selection()
 
 		aria2_input = ''
 		if len(url_list) == 1:
@@ -78,24 +69,30 @@ class DownloaderAria2c(DownloaderAbstract):
 		subproc.finished.connect(self._download_finish)
 		subproc.start(cmd[0], cmd[1:])
 		if not subproc.waitForStarted(self.process_timeout):  # timeout in ms
-			subproc.kill()
-			self._release_ui('Download error')
-			raise Exception('aria2c execution error')
+			self.show_msg('Download error')
+			self.error = 'aria2c execution error'
+			self.finished(self)
+			return
 		if not single:
 			subproc.write(aria2_input.encode())
 			subproc.closeWriteChannel()
-
+		else:
+			self.file_ready_for_playback(self._final_filepath)
 		self._child = subproc
 
 	def _exec_pyprocess_download(self, cmd: list, single: bool, aria2_input: str):
 		try:
 			subproc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-		except Exception:
-			self._release_ui('Download error')
-			raise
+		except Exception as e:
+			self.show_msg('Download error')
+			self.error = str(e)
+			self.finished(self)
+			return
 		if not single:
 			subproc.communicate(aria2_input.encode())
 			subproc.stdin.close()
+		else:
+			self.file_ready_for_playback(self._final_filepath)
 		self._child = subproc
 
 		self._monitor = threading.Thread(target=self._download_finish, daemon=True)
@@ -106,7 +103,8 @@ class DownloaderAria2c(DownloaderAbstract):
 		self._cancel_flag = True
 		self._child.terminate()
 		logging.debug('Sent SIGTERM to subprocess')
-		self._release_ui('Cancelled')
+		self.show_msg('Cancelled')
+		self.finished(self)
 
 	def _download_finish(self):
 		self._child.wait()  # for pyprocess only
@@ -115,8 +113,9 @@ class DownloaderAria2c(DownloaderAbstract):
 			if ret == 0:
 
 				def good_end():
-					self.comm.ready_for_playback_cb(self._final_filepath)
-					self._release_ui('Download Finished')
+					self.file_ready_for_playback(self._final_filepath)
+					self.show_msg('Download Finished')
+					self.finished(self)
 
 				if self._merging:
 					for file in self._files_to_merge:
@@ -130,15 +129,17 @@ class DownloaderAria2c(DownloaderAbstract):
 						good_end()
 			else:
 				if self._merging:
-					self._release_ui(f'FFmpeg Error. Exit code {ret}')
+					self.error = f'FFmpeg Error. Exit code {ret}'
 				else:
-					self._release_ui(f'aria2c Error. Exit code {ret}')
+					self.error = f'aria2c Error. Exit code {ret}'
+				self.show_msg('Download error')
+				self.finished(self)
 
 	def _merge_files(self):
 		"""Merge outputs."""
 		assert self._files_to_merge
 		self._merging = True
-		self.comm.show_msg_cb('Merging files')
+		self.show_msg('Merging files')
 
 		name = self._ytdl.get_filename()[0]
 		filepath = f"{name}.mkv"
@@ -154,13 +155,11 @@ class DownloaderAria2c(DownloaderAbstract):
 
 		try:
 			subproc = subprocess.Popen(' '.join(cmd), shell=True)
-		except Exception:
-			self._release_ui('Merging error')
-			raise
-
-		self._child = subproc
-
-		self._monitor = threading.Thread(target=self._download_finish, daemon=True)
-		self._monitor.start()
-
-		self._final_filepath = filepath
+			self._child = subproc
+			self._monitor = threading.Thread(target=self._download_finish, daemon=True)
+			self._monitor.start()
+			self._final_filepath = filepath
+		except Exception as e:
+			self.show_msg('Download error')
+			self.error = str(e)
+			self.finished(self)

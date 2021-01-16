@@ -2,13 +2,14 @@
 
 from abc import abstractmethod
 
+from ytdl_qt.ytdl import Ytdl
 from ytdl_qt.executor_abstract import ExecutorAbstract
 
 
 class DownloaderAbstract(ExecutorAbstract):
 
-	def __init__(self, ytdl, comm):
-		super().__init__(ytdl, comm)
+	def __init__(self, ytdl: Ytdl):
+		super().__init__(ytdl)
 
 	@abstractmethod
 	def download_start(self):
@@ -18,6 +19,5 @@ class DownloaderAbstract(ExecutorAbstract):
 	def download_cancel(self):
 		pass
 
-	@abstractmethod
-	def _download_finish(self):
-		pass
+	def file_ready_for_playback(self, path: str):
+		raise NotImplementedError

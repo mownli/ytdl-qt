@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations  # in 3.10 gets into the mainline
 from abc import ABC, abstractmethod
-from typing import Callable
 
-
-class Comm:
-
-	set_pbar_max_cb = Callable[[int], None]  # (value)
-	set_pbar_value_cb = Callable[[int], None]  # (value)
-	show_msg_cb = Callable[[str], None]  # (msg)
-	release_ui_cb = Callable[[], None]
-	ready_for_playback_cb = Callable[[str], None]   # (filepath)
-	# TODO: add error signal
+from ytdl_qt.ytdl import Ytdl
 
 
 class ExecutorAbstract(ABC):
 
-	process_timeout = 5000  # ms
+	process_timeout: int = 5000  # ms
+	error: str = ''
 
-	def __init__(self, ytdl, comm):
+	def __init__(self, ytdl: Ytdl):
 		self._ytdl = ytdl
-		self.comm = comm
 
 	@abstractmethod
 	def _setup_ui(self):
 		pass
 
-	@abstractmethod
-	def _release_ui(self, msg):
-		self.comm.release_ui_cb()
+	def set_pbar_max(self, val: int):
+		raise NotImplementedError
+
+	def set_pbar_value(self, val: int):
+		raise NotImplementedError
+
+	def show_msg(self, msg: str):
+		raise NotImplementedError
+
+	def finished(self, sender: ExecutorAbstract):
+		raise NotImplementedError

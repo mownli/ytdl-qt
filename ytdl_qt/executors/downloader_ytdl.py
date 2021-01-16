@@ -17,40 +17,30 @@ class DownloaderYtdl(DownloaderAbstract):
 	class Cancelled(Exception):
 		pass
 
-	def __init__(self, ytdl, comm):
+	def __init__(self, ytdl):
 		logging.debug('Instantiating DownloaderYtdl')
-
-		assert comm.set_pbar_max_cb is not None
-		assert comm.show_msg_cb is not None
-		assert comm.release_ui_cb is not None
-		assert comm.set_pbar_value_cb is not None
-		assert comm.ready_for_playback_cb is not None
-
-		super().__init__(ytdl, comm)
+		super().__init__(ytdl)
 		self._ytdl.add_progress_hook(self.ytdl_processing_hook)
-		self._download_ct = 0
-		self._cancel_flag = False
+		self._download_ct: int = 0
+		self._cancel_flag: bool = False
 
 	def _setup_ui(self):
-		self.comm.set_pbar_max_cb(100)
-		self.comm.show_msg_cb('Downloading target')
-
-	def _release_ui(self, msg):
-		self.comm.show_msg_cb(msg)
-		self.comm.release_ui_cb()
+		self.set_pbar_max(100)
+		self.show_msg('Downloading target')
 
 	def download_start(self):
-		""""""
 		self._setup_ui()
 		self._download_ct = self._ytdl.get_number_of_files_to_download()
 
 		try:
 			self._ytdl.download([self._ytdl.get_current_url()])
 		except self.Cancelled:
-			self._release_ui('Cancelled')
+			self.show_msg('Cancelled')
+			self.finished(self)
 		except Exception as e:
-			self._release_ui('Error')
-			raise e
+			self.show_msg('Download Error')
+			self.error = str(e)
+			self.finished(self)
 		finally:
 			# Needed after every ytdl download to avoid future format collisions
 			logging.debug('Cleanup')
@@ -60,10 +50,7 @@ class DownloaderYtdl(DownloaderAbstract):
 	def download_cancel(self):
 		self._cancel_flag = True
 
-	def _download_finish(self):
-		pass
-
-	def ytdl_processing_hook(self, d):
+	def ytdl_processing_hook(self, d: dict):
 		"""
 		YoutubeDl hook that sometimes gets called during download.
 		Refreshes UI, shows progress and throws exception on error.
@@ -79,21 +66,25 @@ class DownloaderYtdl(DownloaderAbstract):
 			downloaded_str = utils.convert_size(downloaded)
 			if self._ytdl.Keys.total_bytes in d:
 				total = d[self._ytdl.Keys.total_bytes]
-				self.comm.set_pbar_value_cb(floor(downloaded / total * 100))
+				self.set_pbar_value(floor(downloaded / total * 100))
 				total_str = utils.convert_size(total)
 			elif self._ytdl.Keys.total_bytes_estimate in d:
 				total = d[self._ytdl.Keys.total_bytes_estimate]
-				self.comm.set_pbar_value_cb(floor(downloaded / total * 100))
+				self.set_pbar_value(floor(downloaded / total * 100))
 				total_str = utils.convert_size(total)
 
 			msg = ''
 			if utils.check_dict_attribute(d, self._ytdl.Keys.eta):
 				msg += f"ETA: {str(datetime.timedelta(seconds=d[self._ytdl.Keys.eta]))}    "
 			msg += f"{downloaded_str} / {total_str}"
-			self.comm.show_msg_cb(msg)
+			self.show_msg(msg)
 
 		elif d[self._ytdl.Keys.status] == self._ytdl.Keys.finished:
-			self.comm.ready_for_playback_cb(d[self._ytdl.Keys.filename])
-			self._release_ui('Download Finished')
+			self._download_ct = self._download_ct - 1
+			if self._download_ct == 0:
+				self.file_ready_for_playback(d[self._ytdl.Keys.filename])
+				self.show_msg('Download Finished')
+				self.finished(self)
+
 		elif d[self._ytdl.Keys.status] == self._ytdl.Keys.error:
-			raise Exception('Something happened')
+			raise Exception('Something happened inside youtube-dl')
