@@ -11,5 +11,10 @@ setup(
     author_email='',
     description='',
     python_requires='>=3',
-    scripts=['data/ytdl-qt.py'],
+    entry_points={
+        'gui_scripts': [
+            'ytdl-qt=ytdl_qt.__main__:main',
+        ],
+    },
+    include_package_data=True,
 )
