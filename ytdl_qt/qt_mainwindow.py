@@ -262,3 +262,6 @@ class MainWindow(QMainWindow):
 
 	def set_history(self, hist: History):
 		self.ui.historyView.setModel(HistoryTableModel(hist))
+
+	def set_alert(self):
+		QApplication.alert(self, 0)

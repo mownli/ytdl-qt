@@ -169,6 +169,7 @@ class Core:
 	def task_finished(self, sender: ExecutorAbstract):
 		assert sender is not None
 		self.release_ui()
+		self.ui.set_alert()
 		if sender.error:
 			self.ui.error_dialog_exec('Error', sender.error)
 			return
