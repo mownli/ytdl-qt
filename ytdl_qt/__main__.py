@@ -5,12 +5,10 @@ import logging
 import subprocess
 import sys
 
-from PyQt5.QtWidgets import QApplication
 from pyperclip import paste
 
-from ytdl_qt.core import Core
 from ytdl_qt import utils
-from ytdl_qt.qt_mainwindow import MainWindow
+from ytdl_qt.qt_wrapper import MainWindow, QtWrapper
 
 
 def check_ffmpeg():
@@ -44,14 +42,10 @@ def main():
 	if args.d:
 		logging.getLogger().setLevel(level='DEBUG')
 
-	app = QApplication([])
-	# QApplication.setApplicationDisplayName(MainWindow.WINDOW_TITLE)
-
 	check_ffmpeg()
 
-	Core(url)
-
-	sys.exit(app.exec_())
+	app = QtWrapper()
+	sys.exit(app.exec(url))
 
 
 if __name__ == "__main__":

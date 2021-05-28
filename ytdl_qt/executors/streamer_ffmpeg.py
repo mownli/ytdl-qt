@@ -13,19 +13,18 @@ from ytdl_qt import utils
 
 class StreamerFfmpeg(StreamerAbstract):
 	def __init__(self, ytdl):
-		logging.debug('Instantiating StreamerFfmpeg')
 		super().__init__(ytdl)
 		self._children = []
 		self._monitor = None  # for pyprocess
 
 	def _setup_ui(self):
-		self.show_msg('Streaming target')
+		self.show_msg_cb('Streaming target')
 
 	def stream_start(self):
 		assert not self._children
 
 		self._setup_ui()
-		self.set_pbar_max(0)
+		self.set_progress_max_cb(0)
 
 		url_list: List[str] = self._ytdl.get_url_selection()
 		protocol_list = self._ytdl.get_protocol_selection()
@@ -73,11 +72,11 @@ class StreamerFfmpeg(StreamerAbstract):
 			self._monitor = threading.Thread(target=self._stream_finish, daemon=True)
 			self._monitor.start()
 		except Exception as e:
-			self.show_msg('Streaming error')
+			self.show_msg_cb('Streaming error')
 			self.error = str(e)
 			if self._monitor is not None:
 				self._monitor.join()
-			self.finished(self)
+			self.finished_cb(self)
 
 	def stream_start_detached(self):
 		self._setup_ui()
@@ -94,9 +93,9 @@ class StreamerFfmpeg(StreamerAbstract):
 		try:
 			subprocess.Popen(arg_cmd_str, shell=True, start_new_session=True)
 		except Exception as e:
-			self.show_msg('Streaming error')
+			self.show_msg_cb('Streaming error')
 			self.error = str(e)
-		self.finished(self)
+		self.finished_cb(self)
 
 	# def _stream_finish(self):
 		# Relies on QProcess
@@ -111,5 +110,5 @@ class StreamerFfmpeg(StreamerAbstract):
 			self._children[0].stdout.close()
 			self._children[0].wait()
 		logging.debug('Sent SIGTERM to subprocess')
-		self.show_msg('Finished streaming')
-		self.finished(self)
+		self.show_msg_cb('Finished streaming')
+		self.finished_cb(self)

@@ -67,7 +67,7 @@ class Ytdl(YoutubeDL):
 	def set_format(self, fmt_id_list):
 		"""Sorts and sets format ids previously returned by YoutubeDL to download."""
 		assert self._info is not None
-		if len(fmt_id_list) not in range(0, 3):
+		if len(fmt_id_list) not in range(3):
 			raise Exception('Two inputs max')
 
 		if len(fmt_id_list) == 0:
@@ -81,7 +81,6 @@ class Ytdl(YoutubeDL):
 					if fmt_dict[self.Keys.id] == fmt_id:
 						fmt_dicts.append(fmt_dict)
 						break
-			fmt_str = ''
 			if check_dict_attribute(fmt_dicts[0], self.Keys.vcodec) and not check_dict_attribute(fmt_dicts[1], self.Keys.vcodec):
 				fmt_str = f"{fmt_dicts[0][self.Keys.id]}+{fmt_dicts[1][self.Keys.id]}"
 			elif check_dict_attribute(fmt_dicts[1], self.Keys.vcodec) and not check_dict_attribute(fmt_dicts[0], self.Keys.vcodec):
@@ -170,6 +169,7 @@ class Ytdl(YoutubeDL):
 	def get_url_list_by_ids(self, fmt_id_list):
 		"""Return list of urls given the list of format ids."""
 		assert self._info is not None
+		logging.debug(f'AKJSDHASKDHKJASDAS {fmt_id_list}')
 		url_list = []
 		if self.Keys.formats_received in self._info:
 			for item in self._info[self.Keys.formats_received]:
@@ -177,6 +177,7 @@ class Ytdl(YoutubeDL):
 					url_list.append(item[self.Keys.url])
 		else:
 			url_list = [self._info[self.Keys.url]]
+		logging.debug(f'AKJSDHASKDHKJASDAS {url_list}')
 		return url_list
 
 	def get_protocol_selection(self):

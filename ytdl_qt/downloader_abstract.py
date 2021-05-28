@@ -19,5 +19,5 @@ class DownloaderAbstract(ExecutorAbstract):
 	def download_cancel(self):
 		pass
 
-	def file_ready_for_playback(self, path: str):
-		raise NotImplementedError
+	def file_ready_for_playback_cb(self, path: str):
+		pass

@@ -13,7 +13,6 @@ class HistoryTableModel(QAbstractTableModel):
 		self._data = self._history.get_data_unique()
 
 	def data(self, index, role=Qt.DisplayRole):
-		# logging.debug('')
 		if index.row() >= len(self._data):
 			return None
 
@@ -28,7 +27,6 @@ class HistoryTableModel(QAbstractTableModel):
 		return len(self._history.keys)
 
 	def headerData(self, section, orientation, role):
-		# logging.debug('')
 		if role == Qt.DisplayRole:
 			if orientation == Qt.Horizontal:
 				return self._history.keys[section]
@@ -36,7 +34,6 @@ class HistoryTableModel(QAbstractTableModel):
 				return section
 
 	def insertRows(self, row, count, dict_items, parent=None):
-		logging.debug('')
 		count = len(dict_items)
 		self.beginInsertRows(QModelIndex(), row, row + count - 1)
 
@@ -48,7 +45,6 @@ class HistoryTableModel(QAbstractTableModel):
 		self.endInsertRows()
 
 	def add_history_item(self, title, url):
-		logging.debug('')
 		assert title, url is not None
 		# self._items_to_add = [{self._[0]: title, self._[1]: url}]
 		# self.insertRows(0, 1)

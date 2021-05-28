@@ -18,14 +18,17 @@ class ExecutorAbstract(ABC):
 	def _setup_ui(self):
 		pass
 
-	def set_pbar_max(self, val: int):
-		raise NotImplementedError
+	def update_ui_cb(self):
+		pass
 
-	def set_pbar_value(self, val: int):
-		raise NotImplementedError
+	def set_progress_max_cb(self, val: int):
+		pass
 
-	def show_msg(self, msg: str):
-		raise NotImplementedError
+	def set_progress_val_cb(self, val: int):
+		pass
 
-	def finished(self, sender: ExecutorAbstract):
-		raise NotImplementedError
+	def show_msg_cb(self, msg: str):
+		pass
+
+	def finished_cb(self, sender: ExecutorAbstract):
+		pass

@@ -12,14 +12,13 @@ from ytdl_qt import utils
 
 class DownloaderFfmpeg(DownloaderAbstract):
 	def __init__(self, ytdl):
-		logging.debug('Instantiating DownloaderFfmpeg')
 		super().__init__(ytdl)
 		self._child = None
 		self._cancel_flag: bool = False
 
 	def _setup_ui(self):
-		self.set_pbar_max(0)
-		self.show_msg('Downloading target')
+		self.set_progress_max_cb(0)
+		self.show_msg_cb('Downloading target')
 
 	def download_start(self):
 		"""Download with ffmpeg. Useful for m3u8 protocol. Doesn't block."""
@@ -49,20 +48,20 @@ class DownloaderFfmpeg(DownloaderAbstract):
 			self._monitor = threading.Thread(target=self._download_finish, daemon=True)
 			self._monitor.start()
 		except Exception as e:
-			self.show_msg('Download error')
+			self.show_msg_cb('Download error')
 			self.error = str(e)
-			self.finished(self)
+			self.finished_cb(self)
 			return
 
-		self.file_ready_for_playback(filepath)
+		self.file_ready_for_playback_cb(filepath)
 
 	def download_cancel(self):
 		assert self._child is not None
 		self._cancel_flag = True
 		self._child.terminate()
 		logging.debug('Sent SIGTERM to subprocess')
-		self.show_msg('Cancelled')
-		self.finished(self)
+		self.show_msg_cb('Cancelled')
+		self.finished_cb(self)
 
 	# def _download_finish(self):
 	# 	# Relies on QProcess
@@ -78,8 +77,8 @@ class DownloaderFfmpeg(DownloaderAbstract):
 		if not self._cancel_flag:
 			ret = self._child.returncode
 			if ret == 0:
-				self.show_msg('Download Finished')
+				self.show_msg_cb('Download Finished')
 			else:
-				self.show_msg('Download error')
+				self.show_msg_cb('Download error')
 				self.error = f'FFmpeg Error. Exit code {ret}'
-			self.finished(self)
+			self.finished_cb(self)
