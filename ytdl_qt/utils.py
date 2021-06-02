@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 import math
-import os
-import pathlib
+import subprocess
 
 
 def convert_size(size_bytes):
@@ -16,17 +15,30 @@ def convert_size(size_bytes):
 
 
 def check_dict_attribute(item, key):
-	"""Needed for get_info()."""
-	if (key in item) and (item[key] != 'none') and (item[key] is not None):
+	if key in item:
+		stuff = item[key]
+		if stuff != 'none' and stuff is not None:
+			return True
+	return False
+
+
+def check_ffmpeg(path: str) -> bool:
+	try:
+		subprocess.run(
+			[path, '-version'],
+			check=True,
+			stdout=subprocess.DEVNULL,
+			stderr=subprocess.DEVNULL
+		)
 		return True
-	else:
+	except Exception:
 		return False
 
 
-def build_ffmpeg_cmd(url_list, output_file=None, flv=False, force_ow=True, quiet=False, protected_args=False):
+def build_ffmpeg_args_list(url_list, output_file=None, flv=False, force_ow=True, quiet=False, quoted=False):
 	"""Return list with arguments for ffmpeg execution."""
 	assert len(url_list) > 0
-	ffmpeg_cmd = ['ffmpeg', '-hide_banner', '-nostdin']
+	ffmpeg_cmd = ['-hide_banner', '-nostdin']
 	if quiet:
 		ffmpeg_cmd += ['-loglevel', 'panic']
 	if force_ow:
@@ -34,7 +46,7 @@ def build_ffmpeg_cmd(url_list, output_file=None, flv=False, force_ow=True, quiet
 	else:
 		ffmpeg_cmd.append('-n')
 	for item in url_list:
-		ffmpeg_cmd += ['-i', f"\"{item}\"" if protected_args else item]
+		ffmpeg_cmd += ['-i', f"\"{item}\"" if quoted else item]
 	url_list_len = len(url_list)
 	if url_list_len > 1:
 		for i in range(0, url_list_len):
@@ -48,50 +60,5 @@ def build_ffmpeg_cmd(url_list, output_file=None, flv=False, force_ow=True, quiet
 		else:
 			ffmpeg_cmd += ['-f', 'matroska', '-']
 	else:
-		ffmpeg_cmd.append(f"\"{output_file}\"" if protected_args else output_file)
+		ffmpeg_cmd.append(f"\"{output_file}\"" if quoted else output_file)
 	return ffmpeg_cmd
-
-
-class Paths:
-
-	application_name = 'ytdl-qt'
-	history_file = 'url-history.csv'
-
-	@staticmethod
-	def get_history():
-		if os.name == 'nt':
-			return pathlib.Path(
-				os.getenv('APPDATA'),
-				Paths.application_name,
-				Paths.history_file
-			)
-		elif os.name == 'posix':
-			return pathlib.Path(
-				os.getenv('XDG_DATA_HOME', default=f"{os.getenv('HOME')}/.local/share"),
-				Paths.application_name,
-				Paths.history_file
-			)
-		else:
-			# Don't know about 'java'
-			return None
-
-	@staticmethod
-	def get_mpv_exe():
-		if os.name == 'nt':
-			return 'mpv.exe'
-		else:
-			return 'mpv'
-
-	@staticmethod
-	def get_ffmpeg_exe():
-		if os.name == 'nt':
-			return 'ffmpeg.exe'
-		else:
-			return 'ffmpeg'
-
-	@staticmethod
-	def get_aria2c_exe():
-		if os.name == 'nt':
-			return 'aria2c.exe'
-		else:
-			return 'aria2c'

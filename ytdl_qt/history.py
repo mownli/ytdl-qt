@@ -2,6 +2,7 @@
 
 import csv
 import logging
+import pathlib
 
 
 class History:
@@ -23,7 +24,7 @@ class History:
 		def __len__(self):
 			return len(self._keys)
 
-	def __init__(self, path):
+	def __init__(self, path: pathlib.Path):
 		self.keys = self._Keys()
 		self._data = []
 		self._data_set = []

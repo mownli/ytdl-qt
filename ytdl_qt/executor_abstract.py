@@ -12,7 +12,7 @@ class ExecutorAbstract(ABC):
 	error: str = ''
 
 	def __init__(self, ytdl: Ytdl):
-		self._ytdl = ytdl
+		self.ytdl = ytdl
 
 	@abstractmethod
 	def _setup_ui(self):

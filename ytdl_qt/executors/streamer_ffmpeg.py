@@ -3,12 +3,12 @@
 import logging
 import subprocess
 import threading
-
-# from PyQt5.QtCore import QProcess
 from typing import List
 
-from ytdl_qt.streamer_abstract import StreamerAbstract
+# from PyQt5.QtCore import QProcess
+
 from ytdl_qt import utils
+from ytdl_qt.streamer_abstract import StreamerAbstract
 
 
 class StreamerFfmpeg(StreamerAbstract):
@@ -26,14 +26,22 @@ class StreamerFfmpeg(StreamerAbstract):
 		self._setup_ui()
 		self.set_progress_max_cb(0)
 
-		url_list: List[str] = self._ytdl.get_url_selection()
-		protocol_list = self._ytdl.get_protocol_selection()
+		url_list: List[str] = self.ytdl.get_url_selection()
+		protocol_list = self.ytdl.get_protocol_selection()
 		flv = False
 		if ('m3u8_native' in protocol_list) or ('m3u8' in protocol_list):
 			flv = True
-		ffmpeg_cmd = utils.build_ffmpeg_cmd(url_list=url_list, flv=flv, quiet=True)
+
+		ffmpeg_exe = self.ytdl.get_ffmpeg_path()
+		assert ffmpeg_exe
+
+		ffmpeg_cmd = [ffmpeg_exe] + utils.build_ffmpeg_args_list(url_list=url_list, flv=flv, quiet=True)
 		logging.debug(' '.join(ffmpeg_cmd))
-		player_cmd = [utils.Paths.get_mpv_exe(), '--really-quiet', '--force-window=yes', '-']
+
+		player_exe = self.ytdl.player_path
+		assert player_exe
+
+		player_cmd = [player_exe] + self.ytdl.player_params + ['-']
 		logging.debug(' '.join(player_cmd))
 
 		# ffmpeg = QProcess()
@@ -80,13 +88,23 @@ class StreamerFfmpeg(StreamerAbstract):
 
 	def stream_start_detached(self):
 		self._setup_ui()
-		url_list: List[str] = self._ytdl.get_url_selection()
-		protocol_list: List[str] = self._ytdl.get_protocol_selection()
+		url_list: List[str] = self.ytdl.get_url_selection()
+		protocol_list: List[str] = self.ytdl.get_protocol_selection()
 		flv = False
 		if ('m3u8_native' in protocol_list) or ('m3u8' in protocol_list):
 			flv = True
-		ffmpeg_cmd: List[str] = utils.build_ffmpeg_cmd(url_list=url_list, flv=flv, quiet=True, protected_args=True)
-		player_cmd = [utils.Paths.get_mpv_exe(), '--really-quiet', '--force-window=yes', '-']
+
+		ffmpeg_exe = self.ytdl.get_ffmpeg_path()
+		assert ffmpeg_exe
+
+		ffmpeg_cmd = [f'\"{ffmpeg_exe}\"'] + \
+			utils.build_ffmpeg_args_list(url_list=url_list, flv=flv, quiet=True, quoted=True)
+
+		player_exe = self.ytdl.player_path
+		assert player_exe
+
+		player_cmd = [f'\"{player_exe}\"'] + self.ytdl.player_params + ['-']
+
 		arg_cmd = ffmpeg_cmd + ['|'] + player_cmd
 		arg_cmd_str = ' '.join(arg_cmd)
 		logging.debug(arg_cmd_str)

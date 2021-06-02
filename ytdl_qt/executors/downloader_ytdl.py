@@ -15,7 +15,7 @@ class DownloaderYtdl(DownloaderAbstract):
 
 	def __init__(self, ytdl):
 		super().__init__(ytdl)
-		self._ytdl.add_progress_hook(self.ytdl_processing_hook)
+		self.ytdl.add_progress_hook(self.ytdl_processing_hook)
 		self._download_ct: int = 0
 		self._cancel_flag: bool = False
 
@@ -25,10 +25,10 @@ class DownloaderYtdl(DownloaderAbstract):
 
 	def download_start(self):
 		self._setup_ui()
-		self._download_ct = self._ytdl.get_number_of_files_to_download()
+		self._download_ct = self.ytdl.get_number_of_files_to_download()
 
 		try:
-			self._ytdl.download([self._ytdl.get_current_url()])
+			self.ytdl.download([self.ytdl.get_current_url()])
 		except self.Cancelled:
 			self.show_msg_cb('Cancelled')
 			self.finished_cb(self)
@@ -38,8 +38,8 @@ class DownloaderYtdl(DownloaderAbstract):
 			self.finished_cb(self)
 		finally:
 			# Needed after every ytdl download to avoid future format collisions
-			self._ytdl.reset_format()
-			self._ytdl.set_progress_hooks([])
+			self.ytdl.reset_format()
+			self.ytdl.set_progress_hooks([])
 
 	def download_cancel(self):
 		self._cancel_flag = True
@@ -54,32 +54,32 @@ class DownloaderYtdl(DownloaderAbstract):
 			raise self.Cancelled
 		self.update_ui_cb()
 		# Status dictionary
-		if d[self._ytdl.Keys.status] == self._ytdl.Keys.downloading:
+		if d[self.ytdl.Keys.status] == self.ytdl.Keys.downloading:
 			total_str = ''
-			downloaded = d[self._ytdl.Keys.downloaded_bytes]
+			downloaded = d[self.ytdl.Keys.downloaded_bytes]
 			downloaded_str = utils.convert_size(downloaded)
-			if self._ytdl.Keys.total_bytes in d:
-				total = d[self._ytdl.Keys.total_bytes]
+			if self.ytdl.Keys.total_bytes in d:
+				total = d[self.ytdl.Keys.total_bytes]
 				self.set_progress_val_cb(floor(downloaded / total * 100))
 				total_str = utils.convert_size(total)
-			elif self._ytdl.Keys.total_bytes_estimate in d:
-				total = d[self._ytdl.Keys.total_bytes_estimate]
+			elif self.ytdl.Keys.total_bytes_estimate in d:
+				total = d[self.ytdl.Keys.total_bytes_estimate]
 				self.set_progress_val_cb(floor(downloaded / total * 100))
 				total_str = utils.convert_size(total)
 
 			msg = ''
-			if utils.check_dict_attribute(d, self._ytdl.Keys.eta):
-				msg += f"ETA: {str(datetime.timedelta(seconds=d[self._ytdl.Keys.eta]))}    "
+			if utils.check_dict_attribute(d, self.ytdl.Keys.eta):
+				msg += f"ETA: {str(datetime.timedelta(seconds=d[self.ytdl.Keys.eta]))}    "
 			msg += f"{downloaded_str} / {total_str}"
 			self.show_msg_cb(msg)
 
-		elif d[self._ytdl.Keys.status] == self._ytdl.Keys.finished:
+		elif d[self.ytdl.Keys.status] == self.ytdl.Keys.finished:
 			logging.debug('Hook status = finished')
 			self._download_ct = self._download_ct - 1
 			if self._download_ct == 0:
-				self.file_ready_for_playback_cb(d[self._ytdl.Keys.filename])
+				self.file_ready_for_playback_cb(d[self.ytdl.Keys.filename])
 				self.show_msg_cb('Download Finished')
 				self.finished_cb(self)
 
-		elif d[self._ytdl.Keys.status] == self._ytdl.Keys.error:
+		elif d[self.ytdl.Keys.status] == self.ytdl.Keys.error:
 			raise Exception('Something happened inside youtube-dl')

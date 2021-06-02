@@ -21,7 +21,6 @@ install: $(BUILDDIR)/$(TARGET)
 	install $^ $(INSTALLDIR)/$(TARGET)
 
 clean:
-	rm -f "$(TARGET)"
 	rm -rf build
 	rm -rf dist
 	rm -rf ytdl_qt.egg-info
@@ -31,3 +30,5 @@ wheel: $(SRCDIR)
 
 forms:
 	pyuic5 "$(FORMSDIR)/qt_mainwindow_form.ui" > "$(SRCDIR)/qt_mainwindow_form.py"
+
+.PHONY: forms

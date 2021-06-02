@@ -2,14 +2,17 @@
 
 import logging
 import re
+import shlex
 
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import (
 	QApplication,
 	QMessageBox,
+	QFileDialog
 )
 
-import ytdl_qt.utils as utils
+from ytdl_qt.paths import Paths
+from ytdl_qt.config import Config
 from ytdl_qt.qt_mainwindow import MainWindow
 from ytdl_qt.core import Core, Callbacks
 from ytdl_qt.history import History
@@ -28,11 +31,62 @@ class QtWrapper:
 		self.connect_mainwindow_signals(self.w)
 		self.w.show()
 
+		self.config = Config()
+
 		self.core = Core()
 		self.set_core_callbacks(self.core)
 
+		self.ffmpeg_path_current = None
+		self.ffmpeg_path_previous = None
+		self.ffmpeg_path_default = None
+		self.ffmpeg_path_changed = False
+
+		self.player_path_current = None
+		self.player_path_previous = None
+		self.player_path_changed = False
+
+		self.player_params_current = []
+		self.player_params_previous = None
+		self.player_params_changed = False
+
+		self.process_settings()
+
 		self.url_from_stdin = None
 		self.load_history()
+
+	def process_settings(self):
+		assert self.core
+		self.ffmpeg_path_default = Paths.get_ffmpeg_path()
+		if self.ffmpeg_path_default:
+			self.ffmpeg_path_current = self.ffmpeg_path_default
+		self.w.ui.ffmpegPathEdit.setPlaceholderText(self.ffmpeg_path_default)
+
+		if self.config.ffmpeg_path:
+			self.ffmpeg_path_current = self.config.ffmpeg_path
+			self.w.ui.ffmpegPathEdit.setText(self.ffmpeg_path_current)
+		else:
+			if not self.ffmpeg_path_default:
+				self.msg_box = QMessageBox(self.w)
+				self.msg_box.setIcon(QMessageBox.Warning)
+				self.msg_box.setText('Couldn\'t locate FFmpeg binary. Set the path in the settings tab')
+
+				def delete_box():
+					del self.msg_box
+
+				self.msg_box.finished.connect(delete_box)
+				self.msg_box.open()
+
+		self.w.ui.ffmpegRadio.setEnabled(bool(self.ffmpeg_path_current))
+
+		self.core.set_ffmpeg_path(self.ffmpeg_path_current)
+
+		if self.config.player_path:
+			self.player_path_current = self.config.player_path
+			self.w.ui.playerPathEdit.setText(self.player_path_current)
+		if self.config.player_params:
+			self.player_params_current = self.config.player_params
+			self.w.ui.playerParamsEdit.setText(' '.join(self.player_params_current))
+		self.core.set_player(self.config.player_path, self.player_params_current)
 
 	def connect_mainwindow_signals(self, mw: MainWindow):
 		mw.ui.getInfoButton.clicked.connect(self.getInfoButton_clicked_slot)
@@ -45,11 +99,26 @@ class QtWrapper:
 		mw.ui.infoTableWidget.itemSelectionChanged.connect(
 			self.infoTableWidget_selectionChanged_slot
 		)
+
+		mw.ui.ffmpegPathButton.clicked.connect(self.ffmpegPathButton_clicked_slot)
+		mw.ui.ffmpegPathEdit.editingFinished.connect(self.ffmpegPathEdit_editingFinished_slot)
+		mw.ui.ffmpegPathEdit.textEdited.connect(self.w.enable_apply_and_cancel_buttons)
+
+		mw.ui.playerPathEdit.editingFinished.connect(self.playerPathEdit_editingFinished_slot)
+		mw.ui.playerPathButton.clicked.connect(self.playerPathButton_clicked_slot)
+		mw.ui.playerPathEdit.textEdited.connect(self.w.enable_apply_and_cancel_buttons)
+
+		mw.ui.playerParamsEdit.editingFinished.connect(self.playerParamsEdit_editingFinished_slot)
+		mw.ui.playerParamsEdit.textEdited.connect(self.w.enable_apply_and_cancel_buttons)
+
+		mw.ui.applyChangesButton.clicked.connect(self.applyChangesButton_clicked_slot)
+		mw.ui.cancelChangesButton.clicked.connect(self.cancelChangesButton_clicked_slot)
+
 		self.connect_history_widget()
 
 	def set_core_callbacks(self, core: Callbacks):
 		core.task_finished_cb = self.task_finish
-		core.playback_enabled_cb = self.w.play_set_enabled
+		core.playback_enabled_cb = self.play_set_enabled
 		core.redraw_cb = self.app.processEvents
 		core.set_progress_max_cb = self.w.set_progressBar_max
 		core.set_progress_val_cb = self.w.set_progressBar_value
@@ -57,7 +126,7 @@ class QtWrapper:
 
 	def load_history(self):
 		logging.debug('Trying to load history')
-		hist = History(utils.Paths.get_history())
+		hist = History(Paths.get_history_path())
 		self.w.set_history(hist)
 		logging.debug('History loaded')
 
@@ -75,7 +144,7 @@ class QtWrapper:
 
 			self.w.update_table(self.core.get_info())
 			self.w.play_set_disabled()
-			self.w.set_window_title(self.w.window_title + ' :: ' + self.core.get_title())
+			self.w.setWindowTitle(self.w.window_title + ' :: ' + self.core.get_title())
 			self.show_status_msg('Info loaded')
 
 			self.w.history_add_item(self.core.get_title(), url)
@@ -91,7 +160,7 @@ class QtWrapper:
 			self.error_dialog_exec('Error', error_str)
 
 		self.set_alert()
-		self.w.set_window_title(self.w.window_title + ' :: ' + self.core.get_title())
+		self.w.setWindowTitle(self.w.window_title + ' :: ' + self.core.get_title())
 		self.unlock_ui()
 
 	def disconnect_history_widget(self):
@@ -123,7 +192,7 @@ class QtWrapper:
 		return self.app.exec_()
 
 	def lock_ui_for_download(self):
-		self.w.set_window_title(
+		self.w.setWindowTitle(
 			self.w.window_title + ' :: Downloading :: ' + self.core.get_title()
 		)
 		self.disconnect_history_widget()
@@ -153,7 +222,7 @@ class QtWrapper:
 
 	def urlEdit_textChanged_slot(self):
 		"""Qt slot. Enable getInfoButton if urlEdit is not empty."""
-		if not self.w.ui.urlEdit.text():
+		if not self.w.ui.urlEdit.text().strip():
 			self.w.ui.getInfoButton.setEnabled(False)
 		else:
 			self.w.ui.getInfoButton.setEnabled(True)
@@ -209,6 +278,104 @@ class QtWrapper:
 		except Exception as e:
 			self.error_dialog_exec('Error', str(e))
 
+	def ffmpegPathButton_clicked_slot(self):
+		"""Qt slot."""
+		d = QFileDialog(caption='Provide FFmpeg executable path')
+		# d.setMimeTypeFilters()
+		if d.exec_():
+			path = d.selectedFiles()[0]
+			self.process_ffmpeg_path_change(path)
+			self.w.ui.ffmpegPathEdit.setText(path)
+			self.w.enable_apply_and_cancel_buttons()
+
+	def ffmpegPathEdit_editingFinished_slot(self):
+		"""Qt slot."""
+		self.process_ffmpeg_path_change(self.w.ui.ffmpegPathEdit.text().strip())
+
+	def process_ffmpeg_path_change(self, path: str):
+		self.ffmpeg_path_changed = True
+		self.ffmpeg_path_previous = self.ffmpeg_path_current
+		if not path:
+			self.ffmpeg_path_current = self.ffmpeg_path_default
+		else:
+			self.ffmpeg_path_current = path
+			#self.w.ui.ffmpegPathEdit.setText(path)
+		# self.w.enable_apply_and_cancel_buttons()
+
+	def playerPathButton_clicked_slot(self):
+		"""Qt slot."""
+		d = QFileDialog(caption='Provide player executable path')
+		if d.exec_():
+			path = d.selectedFiles()[0]
+			self.process_player_path_change(path)
+			self.w.ui.playerPathEdit.setText(path)
+			self.w.enable_apply_and_cancel_buttons()
+
+	def playerPathEdit_editingFinished_slot(self):
+		"""Qt slot."""
+		self.process_player_path_change(self.w.ui.playerPathEdit.text().strip())
+
+	def process_player_path_change(self, path: str):
+		self.player_path_changed = True
+		self.player_path_previous = self.player_path_current
+		self.player_path_current = path
+		# self.w.ui.playerPathEdit.setText(path)
+		# self.w.enable_apply_and_cancel_buttons()
+
+	def playerParamsEdit_editingFinished_slot(self):
+		"""Qt slot."""
+		self.player_params_changed = True
+		self.player_params_previous = self.player_params_current
+		self.player_params_current = shlex.split(self.w.ui.playerParamsEdit.text().strip())
+
+	def applyChangesButton_clicked_slot(self):
+		"""Qt slot."""
+		if self.ffmpeg_path_default is self.ffmpeg_path_current:
+			path_to_save = None
+		else:
+			path_to_save = self.ffmpeg_path_current
+		self.config.ffmpeg_path = path_to_save
+		self.ffmpeg_path_previous = None
+		self.ffmpeg_path_changed = False
+		self.w.ui.ffmpegRadio.setEnabled(bool(self.ffmpeg_path_current))
+		self.core.set_ffmpeg_path(self.ffmpeg_path_current)
+
+		self.config.player_path = self.player_path_current
+		self.player_path_previous = None
+		self.player_path_changed = False
+		self.config.player_params = self.player_params_current
+		self.player_params_previous = None
+		self.player_params_changed = False
+		self.core.set_player(self.player_path_current, self.player_params_current)
+
+		self.config.save()
+		self.w.disable_apply_and_cancel_buttons()
+		self.w.show_status_msg('Configuration saved')
+
+	def cancelChangesButton_clicked_slot(self):
+		"""Qt slot."""
+		if self.ffmpeg_path_changed:
+			self.ffmpeg_path_current = self.ffmpeg_path_previous
+			if self.ffmpeg_path_current is self.ffmpeg_path_default:
+				self.w.ui.ffmpegPathEdit.setText('')
+			else:
+				self.w.ui.ffmpegPathEdit.setText(self.ffmpeg_path_current)
+			self.ffmpeg_path_changed = False
+		self.w.ui.ffmpegRadio.setEnabled(bool(self.ffmpeg_path_current))
+		self.core.set_ffmpeg_path(self.ffmpeg_path_current)
+
+		if self.player_path_changed:
+			self.player_path_current = self.player_path_previous
+			self.player_path_changed = False
+			self.w.ui.playerPathEdit.setText(self.player_path_current)
+		if self.player_params_changed:
+			self.player_params_current = self.player_params_previous
+			self.player_params_changed = False
+			self.w.ui.playerParamsEdit.setText(' '.join(self.player_params_current))
+		self.core.set_player(self.player_path_current, self.player_params_current)
+
+		self.w.disable_apply_and_cancel_buttons()
+
 	@staticmethod
 	def error_dialog_exec(status_str: str, msg: str):
 		"""
@@ -223,6 +390,9 @@ class QtWrapper:
 		dialog.setText(msg_clean)
 		dialog.setWindowTitle(status_str)
 		dialog.exec_()
+
+	def play_set_enabled(self):
+		self.w.ui.playButton.setEnabled(bool(self.player_path_current))
 
 	@staticmethod
 	def filename_collision_dialog_exec() -> bool:

@@ -23,13 +23,19 @@ class DownloaderFfmpeg(DownloaderAbstract):
 	def download_start(self):
 		"""Download with ffmpeg. Useful for m3u8 protocol. Doesn't block."""
 		assert self._child is None
+
 		self._setup_ui()
 
-		# filename = ''.join(list(self._ytdl.get_filename()))
-		path, ext = self._ytdl.get_filename()
+		path, ext = self.ytdl.get_filename()
 		ext = '.mkv'
 		filepath = ''.join([path, ext])
-		cmd = utils.build_ffmpeg_cmd(self._ytdl.get_url_selection(), output_file=filepath)
+
+		exe = self.ytdl.get_ffmpeg_path()
+		assert exe
+
+		cmd = [exe] + \
+			utils.build_ffmpeg_args_list(self.ytdl.get_url_selection(), output_file=filepath)
+		logging.debug(f"Command line list: {cmd}")
 		logging.debug(f"Command line: {' '.join(cmd)}")
 		# logging.debug(f"Command line: {cmd}")
 

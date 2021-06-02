@@ -18,6 +18,7 @@ from ytdl_qt.utils import check_dict_attribute, convert_size
 # 	def error(self, msg):
 # 		print(msg)
 
+
 class Ytdl(YoutubeDL):
 
 	class Keys:
@@ -35,6 +36,7 @@ class Ytdl(YoutubeDL):
 		hooks = 'progress_hooks'
 		title = 'title'
 		url = 'url'
+		ffmpeg_location = 'ffmpeg_location'
 
 		# For hooks
 		eta = 'eta'
@@ -47,14 +49,35 @@ class Ytdl(YoutubeDL):
 		filename = 'filename'
 		error = 'error'
 
-	def __init__(self):
+	def __init__(self, ffmpeg_path=None):
 		# params = {'logger': LoggerForYtdl()}
 		params = {'noplaylist': True, 'forcefilename': True}
+		self.player_path = None
+		self.player_params = None
+		self.ffmpeg_path = None
+		if ffmpeg_path is not None and ffmpeg_path:
+			self.ffmpeg_path = ffmpeg_path
+			params[self.Keys.ffmpeg_location] = ffmpeg_path
+
 		YoutubeDL.__init__(self, params=params)
 		self._info = None
 		self._current_url = None
 		self.fmt_id_selection = []
 		self._number_of_files_to_download = 0
+
+	def set_ffmpeg_path(self, path: str):
+		if not path:
+			self.params.pop(self.Keys.ffmpeg_location, None)
+			self.ffmpeg_path = None
+		else:
+			self.params[self.Keys.ffmpeg_location] = path
+			self.ffmpeg_path = path
+
+	def get_ffmpeg_path(self):
+		# if self.ffmpeg_path is None:
+		# 	return Paths.get_ffmpeg_exe()
+		# else:
+		return self.ffmpeg_path
 
 	def download_info(self, url):
 		"""Downloads full info."""
@@ -75,20 +98,27 @@ class Ytdl(YoutubeDL):
 		elif len(fmt_id_list) == 1:
 			fmt_str = ''.join(fmt_id_list)
 		else:
+
 			fmt_dicts = []
 			for fmt_id in fmt_id_list:
 				for fmt_dict in self._info[self.Keys.formats_received]:
 					if fmt_dict[self.Keys.id] == fmt_id:
 						fmt_dicts.append(fmt_dict)
 						break
-			if check_dict_attribute(fmt_dicts[0], self.Keys.vcodec) and not check_dict_attribute(fmt_dicts[1], self.Keys.vcodec):
-				fmt_str = f"{fmt_dicts[0][self.Keys.id]}+{fmt_dicts[1][self.Keys.id]}"
-			elif check_dict_attribute(fmt_dicts[1], self.Keys.vcodec) and not check_dict_attribute(fmt_dicts[0], self.Keys.vcodec):
-				fmt_str = f"{fmt_dicts[1][self.Keys.vcodec]}+{fmt_dicts[0][self.Keys.vcodec]}"
+			if check_dict_attribute(fmt_dicts[0], self.Keys.vcodec) \
+				and not check_dict_attribute(fmt_dicts[1], self.Keys.vcodec):
+				pass
+			elif check_dict_attribute(fmt_dicts[1], self.Keys.vcodec) \
+				and not check_dict_attribute(fmt_dicts[0], self.Keys.vcodec):
+				first = fmt_dicts[0]
+				fmt_dicts[0] = fmt_dicts[1]
+				fmt_dicts[1] = first
 			else:
 				raise Exception('Unacceptable formats. Permitted combinations: video, audio, audio+video')
+			fmt_str = f'{fmt_dicts[0][self.Keys.id]}+{fmt_dicts[1][self.Keys.id]}'
 		logging.debug(f"fmt_str: {fmt_str}")
 		self.params[self.Keys.format_requested] = fmt_str
+		# self.params[self.Keys.format_requested] = '+'.join(fmt_id_list)
 		self.fmt_id_selection = fmt_id_list
 		if len(fmt_id_list) == 0:
 			self._number_of_files_to_download = 1
@@ -169,7 +199,6 @@ class Ytdl(YoutubeDL):
 	def get_url_list_by_ids(self, fmt_id_list):
 		"""Return list of urls given the list of format ids."""
 		assert self._info is not None
-		logging.debug(f'AKJSDHASKDHKJASDAS {fmt_id_list}')
 		url_list = []
 		if self.Keys.formats_received in self._info:
 			for item in self._info[self.Keys.formats_received]:
@@ -177,7 +206,6 @@ class Ytdl(YoutubeDL):
 					url_list.append(item[self.Keys.url])
 		else:
 			url_list = [self._info[self.Keys.url]]
-		logging.debug(f'AKJSDHASKDHKJASDAS {url_list}')
 		return url_list
 
 	def get_protocol_selection(self):

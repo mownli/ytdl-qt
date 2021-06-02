@@ -2,26 +2,11 @@
 
 import argparse
 import logging
-import subprocess
 import sys
 
 from pyperclip import paste
 
-from ytdl_qt import utils
-from ytdl_qt.qt_wrapper import MainWindow, QtWrapper
-
-
-def check_ffmpeg():
-	try:
-		subprocess.run(
-			[utils.Paths.get_ffmpeg_exe(), '-version'],
-			check=True,
-			stdout=subprocess.DEVNULL,
-			stderr=subprocess.DEVNULL
-		)
-	except Exception:
-		MainWindow.error_dialog_exec('Error', 'Could not launch FFmpeg')
-		sys.exit(1)
+from ytdl_qt.qt_wrapper import QtWrapper
 
 
 def main():
@@ -41,8 +26,6 @@ def main():
 
 	if args.d:
 		logging.getLogger().setLevel(level='DEBUG')
-
-	check_ffmpeg()
 
 	app = QtWrapper()
 	sys.exit(app.exec(url))

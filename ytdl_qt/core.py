@@ -3,6 +3,7 @@
 import logging
 import subprocess
 from enum import Enum, auto
+from typing import List
 
 from ytdl_qt.executor_abstract import ExecutorAbstract
 from ytdl_qt.streamer_abstract import StreamerAbstract
@@ -12,7 +13,6 @@ from ytdl_qt.executors.downloader_aria2c import DownloaderAria2c
 from ytdl_qt.executors.downloader_ffmpeg import DownloaderFfmpeg
 from ytdl_qt.executors.downloader_ytdl import DownloaderYtdl
 from ytdl_qt.ytdl import Ytdl
-from ytdl_qt import utils
 
 
 class Callbacks:
@@ -91,8 +91,6 @@ class Core(Callbacks):
 		elif d_type is self.DownloaderType.ARIA2:
 			self.downloader = DownloaderAria2c(self.ytdl)
 
-		# self.ytdl.set_format(self.get_selected_formats_cb())
-
 		self.connect_downloader(self.downloader)
 		self.d_blocked = True
 		self.downloader.download_start()
@@ -100,7 +98,6 @@ class Core(Callbacks):
 	def stream_target(self) -> None:
 		self.streamer_list.append(StreamerFfmpeg(self.ytdl))
 		self.connect_streamer(self.streamer_list[-1])
-		# self.ytdl.set_format(self.get_selected_formats_cb)
 		# self.streamer_list[-1].stream_start()
 		self.streamer_list[-1].stream_start_detached()
 
@@ -108,7 +105,7 @@ class Core(Callbacks):
 		assert self.file_for_playback
 		logging.debug(f'Playing {self.file_for_playback}')
 		subprocess.Popen(
-			[utils.Paths.get_mpv_exe(), '--force-window', '--quiet', self.file_for_playback]
+			[self.ytdl.player_path] + self.ytdl.player_params + [self.file_for_playback]
 		)
 
 	def download_cancel(self) -> None:
@@ -120,15 +117,27 @@ class Core(Callbacks):
 		downloader.set_progress_val_cb = self.set_progress_val_cb
 		downloader.show_msg_cb = self.show_msg_cb
 
-		downloader.finished_cb = self.task_finished_cb
-		downloader.file_ready_for_playback_cb = self.playback_enabled_cb
+		# Local callbacks
+		downloader.finished_cb = self.task_finished
+		downloader.file_ready_for_playback_cb = self.set_playback_enabled
 
 	def connect_streamer(self, downloader: StreamerAbstract) -> None:
 		downloader.set_progress_max_cb = self.set_progress_max_cb
 		downloader.show_msg_cb = self.show_msg_cb
-		downloader.finished_cb = self.task_finished_cb
+
+		# Local callbacks
+		downloader.finished_cb = self.task_finished
 
 	def task_finished(self, sender: ExecutorAbstract) -> None:
 		self.d_blocked = False
 		signal = (False if sender.error else True, sender.error)
 		self.task_finished_cb(signal)
+
+	def set_ffmpeg_path(self, path: str) -> None:
+		logging.debug(f'Setting ffmpeg path: {path}')
+		self.ytdl.set_ffmpeg_path(path)
+
+	def set_player(self, path: str, params: List[str]) -> None:
+		logging.debug(f'Setting player path: {path}')
+		self.ytdl.player_path = path
+		self.ytdl.player_params = params

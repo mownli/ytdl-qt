@@ -8,6 +8,7 @@ from PyQt5.QtCore import QProcess
 import subprocess
 import threading
 
+from ytdl_qt.paths import Paths
 from ytdl_qt.downloader_abstract import DownloaderAbstract
 from ytdl_qt import utils
 
@@ -32,16 +33,16 @@ class DownloaderAria2c(DownloaderAbstract):
 		self._setup_ui()
 
 		cmd = [
-			utils.Paths.get_aria2c_exe(), '-c', '-x', '3', '-k', '1M',
+			Paths.get_aria2c_exe(), '-c', '-x', '3', '-k', '1M',
 			'--summary-interval=1', '--enable-color=false', '--file-allocation=falloc'
 		]
 
-		url_list: List[str] = self._ytdl.get_url_selection()
+		url_list: List[str] = self.ytdl.get_url_selection()
 
 		aria2_input = ''
 		if len(url_list) == 1:
 			single = True
-			name, ext = self._ytdl.get_filename()
+			name, ext = self.ytdl.get_filename()
 			file = name + ext
 			self._final_filepath = file
 			url = ''.join(url_list)
@@ -49,12 +50,13 @@ class DownloaderAria2c(DownloaderAbstract):
 			cmd += ['-o', f"{file}", f"{url}"]
 		else:
 			single = False
-			name = self._ytdl.get_filename()[0]
-			fmts = self._ytdl.fmt_id_selection
+			name = self.ytdl.get_filename()[0]
+			fmts = self.ytdl.fmt_id_selection
 			for index, url in enumerate(url_list):
 				path = f"{name}.{fmts[index]}.input{index}"
 				aria2_input += url + f"\n out={path}\n"
-				self._files_to_merge.append(path)
+				if self.ytdl.get_ffmpeg_path() is not None:
+					self._files_to_merge.append(path)
 			cmd += ['-i', '-']
 		logging.debug(f"Command line {' '.join(cmd)}")
 
@@ -140,9 +142,11 @@ class DownloaderAria2c(DownloaderAbstract):
 		self._merging = True
 		self.show_msg_cb('Merging files')
 
-		name = self._ytdl.get_filename()[0]
+		name = self.ytdl.get_filename()[0]
 		filepath = f"{name}.mkv"
-		cmd = utils.build_ffmpeg_cmd(self._files_to_merge, output_file=filepath, protected_args=True)
+		# cmd = utils.build_ffmpeg_args_list(self._files_to_merge, output_file=filepath, protected_args=True)
+		cmd = [self.ytdl.get_ffmpeg_path()] + \
+			utils.build_ffmpeg_args_list(self._files_to_merge, output_file=filepath, quoted=True)
 		logging.debug(f"Command line {cmd}")
 
 		# subproc = QProcess()

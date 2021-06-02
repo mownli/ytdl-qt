@@ -3,7 +3,6 @@
 import logging
 import pkgutil
 from typing import List
-
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import (
@@ -76,7 +75,7 @@ class MainWindow(QMainWindow):
 	def set_progressBar_value(self, value: int):
 		self.progressBar.setValue(value)
 
-	def get_url(self):
+	def get_url(self) -> str:
 		return self.ui.urlEdit.text().strip()
 
 	def set_url(self, url: str):
@@ -88,14 +87,8 @@ class MainWindow(QMainWindow):
 	def unlock_info(self):
 		self.ui.tabWidget.setDisabled(False)
 
-	def play_set_enabled(self):
-		self.ui.playButton.setEnabled(True)
-
 	def play_set_disabled(self):
 		self.ui.playButton.setEnabled(False)
-
-	def set_window_title(self, title: str):
-		self.setWindowTitle(title)
 
 	def history_add_item(self, title: str, url: str):
 		if self.ui.historyView.model() is not None:
@@ -117,3 +110,12 @@ class MainWindow(QMainWindow):
 
 	def show_status_msg(self, msg: str):
 		self.statusBar().showMessage(msg)
+
+	def enable_apply_and_cancel_buttons(self):
+		self.ui.applyChangesButton.setEnabled(True)
+		self.ui.cancelChangesButton.setEnabled(True)
+
+	def disable_apply_and_cancel_buttons(self):
+		self.ui.applyChangesButton.setEnabled(False)
+		self.ui.cancelChangesButton.setEnabled(False)
+
