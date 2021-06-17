@@ -3,7 +3,7 @@
 import logging
 import subprocess
 from enum import Enum, auto
-from typing import List
+from typing import List, Tuple
 
 from ytdl_qt.executor_abstract import ExecutorAbstract
 from ytdl_qt.streamer_abstract import StreamerAbstract
@@ -17,7 +17,7 @@ from ytdl_qt.ytdl import Ytdl
 
 class Callbacks:
 
-	def task_finished_cb(self, signal: tuple[bool, str]) -> None:
+	def task_finished_cb(self, signal: Tuple[bool, str]) -> None:
 		pass
 
 	def playback_enabled_cb(self) -> None:
@@ -137,7 +137,10 @@ class Core(Callbacks):
 		logging.debug(f'Setting ffmpeg path: {path}')
 		self.ytdl.set_ffmpeg_path(path)
 
-	def set_player(self, path: str, params: List[str]) -> None:
+	def set_player_path(self, path: str) -> None:
 		logging.debug(f'Setting player path: {path}')
 		self.ytdl.player_path = path
+
+	def set_player_params(self, params: List[str]) -> None:
+		logging.debug(f'Setting player params: {params}')
 		self.ytdl.player_params = params

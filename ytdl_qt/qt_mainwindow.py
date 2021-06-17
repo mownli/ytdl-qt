@@ -3,12 +3,13 @@
 import logging
 import pkgutil
 from typing import List
-from PyQt5.QtCore import Qt
+
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import (
 	QMainWindow,
 	QTableWidgetItem,
-	QProgressBar
+	QProgressBar, QApplication
 )
 
 from ytdl_qt.history import History
@@ -22,6 +23,13 @@ class MainWindow(QMainWindow):
 	window_title = 'ytdl-qt'
 	window_icon = 'ytdl.svg'
 	resources_pkg = 'resources'
+
+	_showStatusMsg = pyqtSignal(str)
+	_playButtonEnable = pyqtSignal(bool)
+	_redraw = pyqtSignal()
+	_progressBarMaxSet = pyqtSignal(int)
+	_progressBarValSet = pyqtSignal(int)
+	_alertSet = pyqtSignal()
 
 	def __init__(self):
 		super().__init__()
@@ -40,6 +48,13 @@ class MainWindow(QMainWindow):
 		self.ui.ytdlRadio.setChecked(True)
 		self.ui.urlEdit.setFocus()
 		self.ui.historyView.verticalHeader().hide()
+
+		self._showStatusMsg.connect(self._showStatusMsg_slot, type=Qt.QueuedConnection)
+		self._playButtonEnable.connect(self._playButtonEnable_slot, type=Qt.QueuedConnection)
+		self._redraw.connect(self._redraw_slot, type=Qt.QueuedConnection)
+		self._progressBarMaxSet.connect(self._set_progressBar_max_slot, type=Qt.QueuedConnection)
+		self._progressBarValSet.connect(self._set_progressBar_value_slot, type=Qt.QueuedConnection)
+		self._alertSet.connect(self._set_alert_slot, type=Qt.QueuedConnection)
 
 	def update_table(self, fmt_list: List[str]):
 		"""Update table contents."""
@@ -60,6 +75,7 @@ class MainWindow(QMainWindow):
 		self.ui.downloadButton.setDisabled(True)
 		self.ui.playButton.setDisabled(True)
 
+	@pyqtSlot()
 	def unlock_ui(self):
 		self.ui.urlEdit.setEnabled(True)
 		self.ui.getInfoButton.setEnabled(True)
@@ -69,10 +85,21 @@ class MainWindow(QMainWindow):
 	def set_history(self, hist: History):
 		self.ui.historyView.setModel(HistoryTableModel(hist))
 
+	#def set_progressBar_max(self, value: int):
+		#self.progressBar.setMaximum(value)
+
 	def set_progressBar_max(self, value: int):
+		self._progressBarMaxSet.emit(value)
+
+	@pyqtSlot(int)
+	def _set_progressBar_max_slot(self, value: int):
 		self.progressBar.setMaximum(value)
 
 	def set_progressBar_value(self, value: int):
+		self._progressBarValSet.emit(value)
+
+	@pyqtSlot(int)
+	def _set_progressBar_value_slot(self, value: int):
 		self.progressBar.setValue(value)
 
 	def get_url(self) -> str:
@@ -108,8 +135,34 @@ class MainWindow(QMainWindow):
 		logging.debug(f"Selected formats {fmt_set}")
 		return list(fmt_set)
 
+	###############
 	def show_status_msg(self, msg: str):
+		self._showStatusMsg.emit(msg)
+
+	@pyqtSlot(str)
+	def _showStatusMsg_slot(self, msg: str):
 		self.statusBar().showMessage(msg)
+
+	def playButton_set_enabled(self, yes: bool):
+		self._playButtonEnable.emit(yes)
+
+	@pyqtSlot(bool)
+	def _playButtonEnable_slot(self, yes: bool):
+		self.ui.playButton.setEnabled(yes)
+
+	def redraw(self):
+		self._redraw.emit()
+
+	@pyqtSlot()
+	def _redraw_slot(self):
+		QApplication.processEvents()
+
+	def set_alert(self):
+		self._alertSet.emit()
+
+	@pyqtSlot()
+	def _set_alert_slot(self):
+		QApplication.alert(self, 0)
 
 	def enable_apply_and_cancel_buttons(self):
 		self.ui.applyChangesButton.setEnabled(True)
@@ -118,4 +171,10 @@ class MainWindow(QMainWindow):
 	def disable_apply_and_cancel_buttons(self):
 		self.ui.applyChangesButton.setEnabled(False)
 		self.ui.cancelChangesButton.setEnabled(False)
+
+
+
+
+
+
 

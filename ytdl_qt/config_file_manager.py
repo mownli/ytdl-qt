@@ -1,18 +1,17 @@
 import configparser
 import logging
-import shlex
 
 from ytdl_qt.paths import Paths
 
 
-class Config:
+class ConfigFileManager:
 
 	def __init__(self, path=None):
 		self.core = None
 
 		self.ffmpeg_path = None
 		self.player_path = None
-		self.player_params = []
+		self.player_params = None
 
 		self.read(path)
 
@@ -26,8 +25,7 @@ class Config:
 			self.ffmpeg_path = self.core['Paths'].get('ffmpeg_path', None)
 			self.player_path = self.core['Paths'].get('player_path', None)
 
-			player_params_str = self.core['Paths'].get('player_params', '')
-			self.player_params = shlex.split(player_params_str)
+			self.player_params = self.core['Paths'].get('player_params', '')
 		except KeyError:
 			pass
 
@@ -39,7 +37,7 @@ class Config:
 		self.core['Paths'] = {
 			'ffmpeg_path': '' if not self.ffmpeg_path else self.ffmpeg_path,
 			'player_path': '' if not self.player_path else self.player_path,
-			'player_params': shlex.join(self.player_params)
+			'player_params': '' if not self.player_params else self.player_params
 		}
 
 		if not path.is_file():

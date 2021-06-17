@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ytdl_qt',
-    version='1.0',
+    version='1.3',
     packages=find_packages(),
     install_requires=['PyQt5', 'pyperclip', 'youtube_dl'],
     url='',
@@ -10,7 +10,7 @@ setup(
     author='gyro',
     author_email='',
     description='',
-    python_requires='>=3',
+    python_requires='>=3.8',
     entry_points={
         'gui_scripts': [
             'ytdl-qt=ytdl_qt.__main__:main',
