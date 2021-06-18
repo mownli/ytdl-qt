@@ -18,7 +18,7 @@ class DownloaderFfmpeg(DownloaderAbstract):
 
 	def _setup_ui(self):
 		self.set_progress_max_cb(0)
-		self.show_msg_cb('Downloading target')
+		self.send_msg_cb('Downloading target')
 
 	def download_start(self):
 		"""Download with ffmpeg. Useful for m3u8 protocol. Doesn't block."""
@@ -54,7 +54,7 @@ class DownloaderFfmpeg(DownloaderAbstract):
 			self._monitor = threading.Thread(target=self._download_finish, daemon=True)
 			self._monitor.start()
 		except Exception as e:
-			self.show_msg_cb('Download error')
+			self.send_msg_cb('Download error')
 			self.error = str(e)
 			self.finished_cb(self)
 			return
@@ -66,7 +66,7 @@ class DownloaderFfmpeg(DownloaderAbstract):
 		self._cancel_flag = True
 		self._child.terminate()
 		logging.debug('Sent SIGTERM to subprocess')
-		self.show_msg_cb('Cancelled')
+		self.send_msg_cb('Cancelled')
 		self.finished_cb(self)
 
 	# def _download_finish(self):
@@ -83,8 +83,8 @@ class DownloaderFfmpeg(DownloaderAbstract):
 		if not self._cancel_flag:
 			ret = self._child.returncode
 			if ret == 0:
-				self.show_msg_cb('Download Finished')
+				self.send_msg_cb('Download Finished')
 			else:
-				self.show_msg_cb('Download error')
+				self.send_msg_cb('Download error')
 				self.error = f'FFmpeg Error. Exit code {ret}'
 			self.finished_cb(self)

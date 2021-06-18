@@ -23,8 +23,8 @@ class Callbacks:
 	def playback_enabled_cb(self) -> None:
 		pass
 
-	def redraw_cb(self) -> None:
-		pass
+	# def redraw_cb(self) -> None:
+	# 	pass
 
 	def set_progress_max_cb(self, val: int) -> None:
 		pass
@@ -112,10 +112,10 @@ class Core(Callbacks):
 		self.downloader.download_cancel()
 
 	def connect_downloader(self, downloader: DownloaderAbstract) -> None:
-		downloader.update_ui_cb = self.redraw_cb
 		downloader.set_progress_max_cb = self.set_progress_max_cb
 		downloader.set_progress_val_cb = self.set_progress_val_cb
-		downloader.show_msg_cb = self.show_msg_cb
+		downloader.send_msg_cb = self.show_msg_cb
+		# downloader.update_ui_cb = self.redraw_cb
 
 		# Local callbacks
 		downloader.finished_cb = self.task_finished
@@ -123,7 +123,7 @@ class Core(Callbacks):
 
 	def connect_streamer(self, downloader: StreamerAbstract) -> None:
 		downloader.set_progress_max_cb = self.set_progress_max_cb
-		downloader.show_msg_cb = self.show_msg_cb
+		downloader.send_msg_cb = self.show_msg_cb
 
 		# Local callbacks
 		downloader.finished_cb = self.task_finished

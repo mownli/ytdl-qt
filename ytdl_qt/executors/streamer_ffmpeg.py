@@ -18,7 +18,7 @@ class StreamerFfmpeg(StreamerAbstract):
 		self._monitor = None  # for pyprocess
 
 	def _setup_ui(self):
-		self.show_msg_cb('Streaming target')
+		self.send_msg_cb('Streaming target')
 
 	def stream_start(self):
 		assert not self._children
@@ -80,7 +80,7 @@ class StreamerFfmpeg(StreamerAbstract):
 			self._monitor = threading.Thread(target=self._stream_finish, daemon=True)
 			self._monitor.start()
 		except Exception as e:
-			self.show_msg_cb('Streaming error')
+			self.send_msg_cb('Streaming error')
 			self.error = str(e)
 			if self._monitor is not None:
 				self._monitor.join()
@@ -111,7 +111,7 @@ class StreamerFfmpeg(StreamerAbstract):
 		try:
 			subprocess.Popen(arg_cmd_str, shell=True, start_new_session=True)
 		except Exception as e:
-			self.show_msg_cb('Streaming error')
+			self.send_msg_cb('Streaming error')
 			self.error = str(e)
 		self.finished_cb(self)
 
@@ -128,5 +128,5 @@ class StreamerFfmpeg(StreamerAbstract):
 			self._children[0].stdout.close()
 			self._children[0].wait()
 		logging.debug('Sent SIGTERM to subprocess')
-		self.show_msg_cb('Finished streaming')
+		self.send_msg_cb('Finished streaming')
 		self.finished_cb(self)

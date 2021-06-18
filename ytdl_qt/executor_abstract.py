@@ -18,8 +18,8 @@ class ExecutorAbstract(ABC):
 	def _setup_ui(self):
 		pass
 
-	def update_ui_cb(self):
-		pass
+	# def update_ui_cb(self):
+	# 	pass
 
 	def set_progress_max_cb(self, val: int):
 		pass
@@ -27,7 +27,7 @@ class ExecutorAbstract(ABC):
 	def set_progress_val_cb(self, val: int):
 		pass
 
-	def show_msg_cb(self, msg: str):
+	def send_msg_cb(self, msg: str):
 		pass
 
 	def finished_cb(self, sender: ExecutorAbstract):

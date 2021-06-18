@@ -25,7 +25,7 @@ class DownloaderAria2c(DownloaderAbstract):
 
 	def _setup_ui(self):
 		self.set_progress_max_cb(0)
-		self.show_msg_cb('Downloading target')
+		self.send_msg_cb('Downloading target')
 
 	def download_start(self):
 		"""Download with aria2 (doesn't block)."""
@@ -70,7 +70,7 @@ class DownloaderAria2c(DownloaderAbstract):
 		subproc.finished.connect(self._download_finish)
 		subproc.start(cmd[0], cmd[1:])
 		if not subproc.waitForStarted(self.process_timeout):  # timeout in ms
-			self.show_msg_cb('Download error')
+			self.send_msg_cb('Download error')
 			self.error = 'aria2c execution error'
 			self.finished_cb(self)
 			return
@@ -85,7 +85,7 @@ class DownloaderAria2c(DownloaderAbstract):
 		try:
 			subproc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
 		except Exception as e:
-			self.show_msg_cb('Download error')
+			self.send_msg_cb('Download error')
 			self.error = str(e)
 			self.finished_cb(self)
 			return
@@ -104,7 +104,7 @@ class DownloaderAria2c(DownloaderAbstract):
 		self._cancel_flag = True
 		self._child.terminate()
 		logging.debug('Sent SIGTERM to subprocess')
-		self.show_msg_cb('Cancelled')
+		self.send_msg_cb('Cancelled')
 		self.finished_cb(self)
 
 	def _download_finish(self):
@@ -115,7 +115,7 @@ class DownloaderAria2c(DownloaderAbstract):
 
 				def good_end():
 					self.file_ready_for_playback_cb(self._final_filepath)
-					self.show_msg_cb('Download Finished')
+					self.send_msg_cb('Download Finished')
 					self.finished_cb(self)
 
 				if self._merging:
@@ -133,14 +133,14 @@ class DownloaderAria2c(DownloaderAbstract):
 					self.error = f'FFmpeg Error. Exit code {ret}'
 				else:
 					self.error = f'aria2c Error. Exit code {ret}'
-				self.show_msg_cb('Download error')
+				self.send_msg_cb('Download error')
 				self.finished_cb(self)
 
 	def _merge_files(self):
 		"""Merge outputs."""
 		assert self._files_to_merge
 		self._merging = True
-		self.show_msg_cb('Merging files')
+		self.send_msg_cb('Merging files')
 
 		name = self.ytdl.get_filename()[0]
 		filepath = f"{name}.mkv"
@@ -163,6 +163,6 @@ class DownloaderAria2c(DownloaderAbstract):
 			self._monitor.start()
 			self._final_filepath = filepath
 		except Exception as e:
-			self.show_msg_cb('Download error')
+			self.send_msg_cb('Download error')
 			self.error = str(e)
 			self.finished_cb(self)

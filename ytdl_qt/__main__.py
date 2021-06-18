@@ -4,9 +4,10 @@ import argparse
 import logging
 import sys
 
+from PyQt5.QtWidgets import QApplication
 from pyperclip import paste
 
-from ytdl_qt.qt_wrapper import QtWrapper
+from ytdl_qt.qt_mainwindow import MainWindow
 
 
 def main():
@@ -27,8 +28,11 @@ def main():
 	if args.d:
 		logging.getLogger().setLevel(level='DEBUG')
 
-	app = QtWrapper()
-	sys.exit(app.exec(url))
+	app = QApplication(sys.argv)
+	w = MainWindow(url)
+	w.show()
+
+	sys.exit(app.exec())
 
 
 if __name__ == "__main__":

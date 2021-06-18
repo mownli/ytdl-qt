@@ -2,20 +2,28 @@
 
 import logging
 import pkgutil
-from typing import List
+import re
+import shlex
+from typing import List, Tuple
 
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSlot, QTimer, Q_ARG, QModelIndex
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import (
 	QMainWindow,
 	QTableWidgetItem,
-	QProgressBar, QApplication
+	QProgressBar,
+	QApplication,
+	QMessageBox,
+	QFileDialog
 )
 
 from ytdl_qt.history import History
 from ytdl_qt.qt_historytablemodel import HistoryTableModel
 from ytdl_qt.qt_mainwindow_form import Ui_MainWindow
 from ytdl_qt.ytdl import Ytdl
+from ytdl_qt.paths import Paths
+from ytdl_qt.core import Core, Callbacks
+from ytdl_qt.settings import Settings
 
 
 class MainWindow(QMainWindow):
@@ -24,14 +32,10 @@ class MainWindow(QMainWindow):
 	window_icon = 'ytdl.svg'
 	resources_pkg = 'resources'
 
-	_showStatusMsg = pyqtSignal(str)
-	_playButtonEnable = pyqtSignal(bool)
-	_redraw = pyqtSignal()
-	_progressBarMaxSet = pyqtSignal(int)
-	_progressBarValSet = pyqtSignal(int)
-	_alertSet = pyqtSignal()
+	# For clearing ANSI stuff from exception messages
+	ansi_esc = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
-	def __init__(self):
+	def __init__(self, url=None):
 		super().__init__()
 		self.ui = Ui_MainWindow()
 		self.ui.setupUi(self)
@@ -49,12 +53,41 @@ class MainWindow(QMainWindow):
 		self.ui.urlEdit.setFocus()
 		self.ui.historyView.verticalHeader().hide()
 
-		self._showStatusMsg.connect(self._showStatusMsg_slot, type=Qt.QueuedConnection)
-		self._playButtonEnable.connect(self._playButtonEnable_slot, type=Qt.QueuedConnection)
-		self._redraw.connect(self._redraw_slot, type=Qt.QueuedConnection)
-		self._progressBarMaxSet.connect(self._set_progressBar_max_slot, type=Qt.QueuedConnection)
-		self._progressBarValSet.connect(self._set_progressBar_value_slot, type=Qt.QueuedConnection)
-		self._alertSet.connect(self._set_alert_slot, type=Qt.QueuedConnection)
+		self.core = Core()
+		self.set_core_callbacks(self.core)
+
+		self.settings = Settings()
+
+		if not self.settings.ffmpeg_path.current:
+			self.msg_box = QMessageBox(self.w)
+			self.msg_box.setIcon(QMessageBox.Warning)
+			self.msg_box.setText('Couldn\'t locate FFmpeg binary. Set the path in the settings tab')
+
+			def delete_box():
+				del self.msg_box
+
+			self.msg_box.finished.connect(delete_box)
+			self.msg_box.open()
+
+		self.ui.ffmpegPathEdit.setText(self.settings.ffmpeg_path.current)
+		self.ui.playerPathEdit.setText(self.settings.player_path.current)
+		self.ui.playerParamsEdit.setText(self.settings.player_params.current)
+		self.set_settings_core()
+		self.set_settings_ui()
+
+		self.history_widget_connected = False
+		self.connect_signals()
+
+		logging.debug('Trying to load history')
+		self.ui.historyView.setModel(HistoryTableModel(History(Paths.get_history_path())))
+		logging.debug('History loaded')
+
+		self.url_from_stdin = None
+		if url is not None:
+			# Slot is called after the window is shown
+			QTimer.singleShot(0, self.get_info_auto)
+			self.url_from_stdin = url
+			self.ui.urlEdit.setText(self.url_from_stdin)
 
 	def update_table(self, fmt_list: List[str]):
 		"""Update table contents."""
@@ -68,6 +101,7 @@ class MainWindow(QMainWindow):
 			self.ui.infoTableWidget.setItem(index, 4, QTableWidgetItem(item[Ytdl.Keys.size]))
 
 	def lock_ui(self):
+		self.disconnect_history_widget()
 		self.ui.urlEdit.setDisabled(True)
 		self.ui.getInfoButton.setDisabled(True)
 		self.ui.cancelButton.setEnabled(True)
@@ -75,47 +109,13 @@ class MainWindow(QMainWindow):
 		self.ui.downloadButton.setDisabled(True)
 		self.ui.playButton.setDisabled(True)
 
-	@pyqtSlot()
 	def unlock_ui(self):
+		self.connect_history_widget()
+		self.infoTableWidget_selectionChanged_slot()
 		self.ui.urlEdit.setEnabled(True)
-		self.ui.getInfoButton.setEnabled(True)
+		self.urlEdit_textChanged()
 		self.ui.cancelButton.setDisabled(True)
 		self.progressBar.setVisible(False)
-
-	def set_history(self, hist: History):
-		self.ui.historyView.setModel(HistoryTableModel(hist))
-
-	#def set_progressBar_max(self, value: int):
-		#self.progressBar.setMaximum(value)
-
-	def set_progressBar_max(self, value: int):
-		self._progressBarMaxSet.emit(value)
-
-	@pyqtSlot(int)
-	def _set_progressBar_max_slot(self, value: int):
-		self.progressBar.setMaximum(value)
-
-	def set_progressBar_value(self, value: int):
-		self._progressBarValSet.emit(value)
-
-	@pyqtSlot(int)
-	def _set_progressBar_value_slot(self, value: int):
-		self.progressBar.setValue(value)
-
-	def get_url(self) -> str:
-		return self.ui.urlEdit.text().strip()
-
-	def set_url(self, url: str):
-		self.ui.urlEdit.setText(url)
-
-	def lock_info(self):
-		self.ui.tabWidget.setDisabled(True)
-
-	def unlock_info(self):
-		self.ui.tabWidget.setDisabled(False)
-
-	def play_set_disabled(self):
-		self.ui.playButton.setEnabled(False)
 
 	def history_add_item(self, title: str, url: str):
 		if self.ui.historyView.model() is not None:
@@ -135,35 +135,6 @@ class MainWindow(QMainWindow):
 		logging.debug(f"Selected formats {fmt_set}")
 		return list(fmt_set)
 
-	###############
-	def show_status_msg(self, msg: str):
-		self._showStatusMsg.emit(msg)
-
-	@pyqtSlot(str)
-	def _showStatusMsg_slot(self, msg: str):
-		self.statusBar().showMessage(msg)
-
-	def playButton_set_enabled(self, yes: bool):
-		self._playButtonEnable.emit(yes)
-
-	@pyqtSlot(bool)
-	def _playButtonEnable_slot(self, yes: bool):
-		self.ui.playButton.setEnabled(yes)
-
-	def redraw(self):
-		self._redraw.emit()
-
-	@pyqtSlot()
-	def _redraw_slot(self):
-		QApplication.processEvents()
-
-	def set_alert(self):
-		self._alertSet.emit()
-
-	@pyqtSlot()
-	def _set_alert_slot(self):
-		QApplication.alert(self, 0)
-
 	def enable_apply_and_cancel_buttons(self):
 		self.ui.applyChangesButton.setEnabled(True)
 		self.ui.cancelChangesButton.setEnabled(True)
@@ -172,9 +143,295 @@ class MainWindow(QMainWindow):
 		self.ui.applyChangesButton.setEnabled(False)
 		self.ui.cancelChangesButton.setEnabled(False)
 
+	# Settings stuff
+	def set_settings_core(self):
+		self.core.set_ffmpeg_path(self.settings.ffmpeg_path.current)
+		self.core.set_player_path(self.settings.player_path.current)
+		self.core.set_player_params(shlex.split(self.settings.player_params.current))
 
+	def set_settings_ui(self):
+		if self.settings.ffmpeg_path.current:
+			self.ui.ffmpegPathEdit.setText(self.settings.ffmpeg_path.current)
+		self.ui.ffmpegRadio.setEnabled(bool(self.settings.ffmpeg_path.current))
 
+	def commit_settings(self):
+		try:
+			self.settings.ffmpeg_path.set(self.ui.ffmpegPathEdit.text().strip())
+			self.settings.player_path.set(self.ui.playerPathEdit.text().strip())
+			self.settings.player_params.set(self.ui.playerParamsEdit.text().strip())
+		except Exception as e:
+			self.error_dialog_exec('FFmpeg', str(e))
+			return
+		self.settings.save()
 
+		self.set_settings_core()
+		self.set_settings_ui()
+		self.disable_apply_and_cancel_buttons()
 
+	def undo_settings(self):
+		self.ui.ffmpegPathEdit.setText(self.settings.ffmpeg_path.current)
+		self.ui.playerPathEdit.setText(self.settings.player_path.current)
+		self.ui.playerParamsEdit.setText(self.settings.player_params.current)
 
+		self.disable_apply_and_cancel_buttons()
 
+	def pick_exe_ffmpeg(self):
+		path = self.filepicker()
+		if path:
+			self.ui.ffmpegPathEdit.setText(path)
+			self.enable_apply_and_cancel_buttons()
+
+	def pick_exe_player(self):
+		path = self.filepicker()
+		if path:
+			self.ui.playerPathEdit.setText(path)
+			self.enable_apply_and_cancel_buttons()
+
+	def filepicker(self):
+		d = QFileDialog(caption='Provide path to the executable')
+		if d.exec_():
+			path = d.selectedFiles()[0]
+			return path
+		else:
+			return None
+
+	def connect_signals(self):
+		self.ui.getInfoButton.clicked.connect(self.getInfoButton_clicked)
+		self.ui.urlEdit.textChanged.connect(self.urlEdit_textChanged)
+		self.ui.downloadButton.clicked.connect(self.downloadButton_clicked)
+		self.ui.cancelButton.clicked.connect(self.cancelButton_clicked)
+		self.ui.streamButton.clicked.connect(self.streamButton_clicked)
+		self.ui.infoTableWidget.itemDoubleClicked.connect(self.streamButton_clicked)
+		self.ui.playButton.clicked.connect(self.playButton_clicked)
+		self.ui.infoTableWidget.itemSelectionChanged.connect(
+			self.infoTableWidget_selectionChanged_slot
+		)
+
+		self.connect_history_widget()
+
+		self.ui.ffmpegPathEdit.textEdited.connect(self.enable_apply_and_cancel_buttons)
+		self.ui.playerPathEdit.textEdited.connect(self.enable_apply_and_cancel_buttons)
+		self.ui.playerParamsEdit.textEdited.connect(self.enable_apply_and_cancel_buttons)
+
+		self.ui.ffmpegPathButton.clicked.connect(self.pick_exe_ffmpeg)
+		self.ui.playerPathButton.clicked.connect(self.pick_exe_player)
+
+		self.ui.applyChangesButton.clicked.connect(self.commit_settings)
+		self.ui.cancelChangesButton.clicked.connect(self.undo_settings)
+
+	def set_core_callbacks(self, core: Callbacks):
+		core.task_finished_cb = self.task_finish
+		core.playback_enabled_cb = self.play_set_enabled
+		core.set_progress_max_cb = self.set_progressBar_max
+		core.set_progress_val_cb = self.set_progressBar_val
+		core.show_msg_cb = self.show_status_msg
+		#core.redraw_cb = self.redraw
+
+	def download_info(self, url: str):
+		"""
+		Download URL info, update tableWidget and history, reset playback
+		information on success. Blocks UI.
+		"""
+		logging.debug(f"Loading info for {url}")
+		self.ui.tabWidget.setDisabled(True)
+		self.show_status_msg('Downloading info')
+		self.redraw()
+
+		try:
+			self.core.download_info(url)
+
+			self.update_table(self.core.get_info())
+			self.ui.playButton.setEnabled(False)
+			self.setWindowTitle(self.window_title + ' :: ' + self.core.get_title())
+			self.show_status_msg('Info loaded')
+
+			self.history_add_item(self.core.get_title(), url)
+		except Exception as e:
+			self.error_dialog_exec('Info loading error', str(e))
+			self.show_status_msg('Info loading error')
+
+		self.ui.tabWidget.setDisabled(False)
+
+	def disconnect_history_widget(self):
+		if self.history_widget_connected:
+			self.ui.historyView.doubleClicked.disconnect(self.history_item_clicked)
+			self.history_widget_connected = False
+
+	def connect_history_widget(self):
+		if not self.history_widget_connected:
+			self.ui.historyView.doubleClicked.connect(self.history_item_clicked)
+			self.history_widget_connected = True
+
+	@pyqtSlot()
+	def get_info_auto(self):
+		"""For a timer during instantiation."""
+		self.download_info(self.url_from_stdin)
+
+	@pyqtSlot()
+	def getInfoButton_clicked(self):
+		self.download_info(self.ui.urlEdit.text().strip())
+
+	@pyqtSlot(QModelIndex)
+	def history_item_clicked(self, index: QModelIndex):
+		"""Get URl from selected item and reload info."""
+		assert self.ui.historyView.model() is not None
+		url = self.ui.historyView.model().get_url(index)
+		self.ui.urlEdit.setText(url)
+		self.ui.tabWidget.setCurrentWidget(self.ui.mainTab)
+		self.download_info(url)
+
+	@pyqtSlot()
+	def urlEdit_textChanged(self):
+		"""Enable getInfoButton if urlEdit is not empty."""
+		if not self.ui.urlEdit.text().strip():
+			self.ui.getInfoButton.setEnabled(False)
+		else:
+			self.ui.getInfoButton.setEnabled(True)
+
+	@pyqtSlot()
+	def infoTableWidget_selectionChanged_slot(self):
+		"""
+		Enable streamButton and downloadButton if
+		there are selected items in the tableWidget.
+		"""
+		if self.ui.infoTableWidget.selectedItems():
+			if not self.core.is_download_blocked():
+				self.ui.downloadButton.setEnabled(True)
+			can_stream = bool(self.settings.ffmpeg_path.current) and bool(self.settings.player_path.current)
+			self.ui.streamButton.setEnabled(can_stream)
+		else:
+			self.ui.downloadButton.setEnabled(False)
+			self.ui.streamButton.setEnabled(False)
+
+	@pyqtSlot()
+	def downloadButton_clicked(self):
+		"""Get selected formats and run selected downloader."""
+		try:
+			formats = self.get_selected_formats()
+			logging.debug(f'Selected formats {formats}')
+			self.core.set_format(formats)
+			self.setWindowTitle(
+				self.window_title + ' :: Downloading :: ' + self.core.get_title()
+			)
+			self.lock_ui()
+			if self.ui.ytdlRadio.isChecked():
+				self.core.download_with_ytdl()
+			elif self.ui.ffmpegRadio.isChecked():
+				self.core.download_with_ffmpeg()
+			elif self.ui.aria2Radio.isChecked():
+				self.core.download_with_aria2()
+		except Exception as e:
+			self.error_dialog_exec('Download Error', str(e))
+			self.unlock_ui()
+
+	@pyqtSlot()
+	def cancelButton_clicked(self):
+		"""Send cancel signal to running downloader."""
+		self.core.download_cancel()
+
+	@pyqtSlot()
+	def streamButton_clicked(self):
+		"""Use FFmpeg downloader to stream selected items."""
+		can_stream = bool(self.settings.ffmpeg_path.current) and bool(self.settings.player_path.current)
+		if not can_stream:
+			self.error_dialog_exec('Stream Error', 'Provide FFmpeg and player executables')
+			return
+		try:
+			formats = self.get_selected_formats()
+			logging.debug(f'Selected formats {formats}')
+			self.core.set_format(formats)
+			self.core.stream_target()
+		except Exception as e:
+			self.error_dialog_exec('Stream Error', str(e))
+
+	@pyqtSlot()
+	def playButton_clicked(self):
+		"""Start playback of the last downloaded file."""
+		try:
+			self.core.play_target()
+		except Exception as e:
+			self.error_dialog_exec('Error', str(e))
+
+	# Asynchronous callbacks
+	def play_set_enabled(self):
+		self.metaObject().invokeMethod(
+			self.ui.playButton,
+			self.ui.playButton.setEnabled.__name__,
+			Qt.QueuedConnection,
+			Q_ARG(bool, bool(self.settings.player_path.current)))
+
+	def task_finish(self, signal: Tuple[bool, str]):
+		success, error_str = signal
+		if not success:
+			self.error_dialog_exec('Error', error_str)
+		self.metaObject().invokeMethod(self, self._task_finish_helper.__name__, Qt.QueuedConnection)
+
+	@pyqtSlot()
+	def _task_finish_helper(self):
+		self.set_alert()
+		self.setWindowTitle(self.window_title + ' :: ' + self.core.get_title())
+		self.unlock_ui()
+
+	def redraw(self):
+		QApplication.processEvents()
+
+	def set_progressBar_max(self, value: int):
+		self.metaObject().invokeMethod(
+			self.progressBar,
+			self.progressBar.setMaximum.__name__,
+			Qt.QueuedConnection,
+			Q_ARG(int, value))
+
+	def set_progressBar_val(self, value: int):
+		self.metaObject().invokeMethod(
+			self.progressBar,
+			self.progressBar.setValue.__name__,
+			Qt.QueuedConnection,
+			Q_ARG(int, value))
+
+	def show_status_msg(self, msg: str):
+		self.metaObject().invokeMethod(
+			self.statusBar(),
+			self.statusBar().showMessage.__name__,
+			Qt.QueuedConnection,
+			Q_ARG(str, msg))
+
+	def set_alert(self):
+		self.metaObject().invokeMethod(
+			self,
+			self._set_alert_helper.__name__,
+			Qt.QueuedConnection)
+
+	@pyqtSlot()
+	def _set_alert_helper(self):
+		QApplication.alert(self, 0)
+
+	@staticmethod
+	def error_dialog_exec(status_str: str, msg: str):
+		"""
+		Throw an error dialog.
+		Accepts title string, message string and QMessageBox message type.
+		"""
+		severity = QMessageBox.Critical
+		dialog = QMessageBox()
+		dialog.setIcon(severity)
+		# For cleaning ANSI stuff from exception messages
+		msg_clean = MainWindow.ansi_esc.sub('', msg)
+		dialog.setText(msg_clean)
+		dialog.setWindowTitle(status_str)
+		dialog.exec_()
+
+	@staticmethod
+	def filename_collision_dialog_exec() -> bool:
+		"""Return True if overwrite is chosen."""
+		dialog = QMessageBox()
+		dialog.setIcon(QMessageBox.Warning)
+		dialog.setText('File with that name already exists. Overwrite?')
+		dialog.setWindowTitle('Filename collision')
+		dialog.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+		dialog.setDefaultButton(QMessageBox.Yes)
+		ret = dialog.exec_()
+		if ret == QMessageBox.Yes:
+			return True
+		else:
+			return False
