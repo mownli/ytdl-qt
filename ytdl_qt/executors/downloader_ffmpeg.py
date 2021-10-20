@@ -11,10 +11,11 @@ from ytdl_qt import utils
 
 
 class DownloaderFfmpeg(DownloaderAbstract):
-	def __init__(self, ytdl):
-		super().__init__(ytdl)
+	def __init__(self, params, ytdl_info):
+		super().__init__(params, ytdl_info)
 		self._child = None
 		self._cancel_flag: bool = False
+		self._monitor = None
 
 	def _setup_ui(self):
 		self.set_progress_max_cb(0)
@@ -26,15 +27,17 @@ class DownloaderFfmpeg(DownloaderAbstract):
 
 		self._setup_ui()
 
-		path, ext = self.ytdl.get_filename()
+		#path, ext = self.ytdl_info.get_filename()
+		path = self.ytdl_info.get_filename()
 		ext = '.mkv'
 		filepath = ''.join([path, ext])
 
-		exe = self.ytdl.get_ffmpeg_path()
+		exe = self.params.ffmpeg_path
 		assert exe
 
 		cmd = [exe] + \
-			utils.build_ffmpeg_args_list(self.ytdl.get_url_selection(), output_file=filepath)
+			utils.build_ffmpeg_args_list(
+				self.ytdl_info.get_format_url_list(self.params.fmt_id_selection), output_file=filepath)
 		logging.debug(f"Command line list: {cmd}")
 		logging.debug(f"Command line: {' '.join(cmd)}")
 		# logging.debug(f"Command line: {cmd}")

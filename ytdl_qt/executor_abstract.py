@@ -3,7 +3,8 @@
 from __future__ import annotations  # in 3.10 gets into the mainline
 from abc import ABC, abstractmethod
 
-from ytdl_qt.ytdl import Ytdl
+from ytdl_qt.ytdl_info import Info
+from ytdl_qt.core_params import CoreParams
 
 
 class ExecutorAbstract(ABC):
@@ -11,15 +12,18 @@ class ExecutorAbstract(ABC):
 	process_timeout: int = 5000  # ms
 	error: str = ''
 
-	def __init__(self, ytdl: Ytdl):
-		self.ytdl = ytdl
+	def __init__(self, params: CoreParams, ytdl_info: Info):
+		assert params is not None
+		assert ytdl_info is not None
+		self.params: CoreParams = params
+		self.ytdl_info: Info = ytdl_info
 
 	@abstractmethod
 	def _setup_ui(self):
 		pass
 
-	# def update_ui_cb(self):
-	# 	pass
+	def update_ui_cb(self):
+		pass
 
 	def set_progress_max_cb(self, val: int):
 		pass

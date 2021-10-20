@@ -7,7 +7,7 @@ import pathlib
 
 class History:
 
-	class _Keys:
+	class Keys:
 
 		url = 'url'
 		title = 'title'
@@ -25,7 +25,7 @@ class History:
 			return len(self._keys)
 
 	def __init__(self, path: pathlib.Path):
-		self.keys = self._Keys()
+		self.keys = self.Keys()
 		self._data = []
 		self._data_set = []
 		self._path = path

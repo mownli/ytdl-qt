@@ -15,8 +15,8 @@ from ytdl_qt import utils
 
 class DownloaderAria2c(DownloaderAbstract):
 
-	def __init__(self, ytdl):
-		super().__init__(ytdl)
+	def __init__(self, params, ytdl_info):
+		super().__init__(params, ytdl_info)
 		self._child = None
 		self._cancel_flag = False
 		self._merging = False
@@ -37,7 +37,7 @@ class DownloaderAria2c(DownloaderAbstract):
 			'--summary-interval=1', '--enable-color=false', '--file-allocation=falloc'
 		]
 
-		url_list: List[str] = self.ytdl.get_url_selection()
+		url_list: List[str] = self.ytdl.get_format_url_list()
 
 		aria2_input = ''
 		if len(url_list) == 1:

@@ -2,14 +2,13 @@
 
 from abc import abstractmethod
 
-from ytdl_qt.ytdl import Ytdl
 from ytdl_qt.executor_abstract import ExecutorAbstract
 
 
 class StreamerAbstract(ExecutorAbstract):
 
-	def __init__(self, ytdl: Ytdl):
-		super().__init__(ytdl)
+	def __init__(self, params, ytdl_info):
+		super().__init__(params, ytdl_info)
 
 	@abstractmethod
 	def stream_start(self):

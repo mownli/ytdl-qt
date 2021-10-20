@@ -12,8 +12,8 @@ from ytdl_qt.streamer_abstract import StreamerAbstract
 
 
 class StreamerFfmpeg(StreamerAbstract):
-	def __init__(self, ytdl):
-		super().__init__(ytdl)
+	def __init__(self, params, ytdl_info):
+		super().__init__(params, ytdl_info)
 		self._children = []
 		self._monitor = None  # for pyprocess
 
@@ -26,22 +26,22 @@ class StreamerFfmpeg(StreamerAbstract):
 		self._setup_ui()
 		self.set_progress_max_cb(0)
 
-		url_list: List[str] = self.ytdl.get_url_selection()
-		protocol_list = self.ytdl.get_protocol_selection()
+		url_list: List[str] = self.ytdl_info.get_format_url_list(self.params.fmt_id_selection)
+		protocol_list: List[str] = self.ytdl_info.get_protocol_list(self.params.fmt_id_selection)
 		flv = False
 		if ('m3u8_native' in protocol_list) or ('m3u8' in protocol_list):
 			flv = True
 
-		ffmpeg_exe = self.ytdl.get_ffmpeg_path()
+		ffmpeg_exe = self.params.ffmpeg_path
 		assert ffmpeg_exe
 
 		ffmpeg_cmd = [ffmpeg_exe] + utils.build_ffmpeg_args_list(url_list=url_list, flv=flv, quiet=True)
 		logging.debug(' '.join(ffmpeg_cmd))
 
-		player_exe = self.ytdl.player_path
+		player_exe = self.params.player_path
 		assert player_exe
 
-		player_cmd = [player_exe] + self.ytdl.player_params + ['-']
+		player_cmd = [player_exe] + self.params.player_params + ['-']
 		logging.debug(' '.join(player_cmd))
 
 		# ffmpeg = QProcess()
@@ -88,22 +88,22 @@ class StreamerFfmpeg(StreamerAbstract):
 
 	def stream_start_detached(self):
 		self._setup_ui()
-		url_list: List[str] = self.ytdl.get_url_selection()
-		protocol_list: List[str] = self.ytdl.get_protocol_selection()
+		url_list: List[str] = self.ytdl_info.get_format_url_list(self.params.fmt_id_selection)
+		protocol_list: List[str] = self.ytdl_info.get_protocol_list(self.params.fmt_id_selection)
 		flv = False
 		if ('m3u8_native' in protocol_list) or ('m3u8' in protocol_list):
 			flv = True
 
-		ffmpeg_exe = self.ytdl.get_ffmpeg_path()
+		ffmpeg_exe = self.params.ffmpeg_path
 		assert ffmpeg_exe
 
 		ffmpeg_cmd = [f'\"{ffmpeg_exe}\"'] + \
 			utils.build_ffmpeg_args_list(url_list=url_list, flv=flv, quiet=True, quoted=True)
 
-		player_exe = self.ytdl.player_path
+		player_exe = self.params.player_path
 		assert player_exe
 
-		player_cmd = [f'\"{player_exe}\"'] + self.ytdl.player_params + ['-']
+		player_cmd = [f'\"{player_exe}\"'] + self.params.player_params + ['-']
 
 		arg_cmd = ffmpeg_cmd + ['|'] + player_cmd
 		arg_cmd_str = ' '.join(arg_cmd)

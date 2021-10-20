@@ -4,10 +4,12 @@ import logging
 
 from PyQt5.QtCore import QAbstractTableModel, Qt, QModelIndex
 
+from ytdl_qt.history import History
+
 
 class HistoryTableModel(QAbstractTableModel):
 
-	def __init__(self, history, parent=None):
+	def __init__(self, history: History, parent=None):
 		super().__init__(parent)
 		self._history = history
 		self._data = self._history.get_data_unique()
@@ -50,10 +52,10 @@ class HistoryTableModel(QAbstractTableModel):
 		# self.insertRows(0, 1)
 		# self._items_to_add = []
 
-		dict_item = {self._history.keys.title: title, self._history.keys.url: url}
+		dict_item = {History.Keys.title: title, History.Keys.url: url}
 		self._history.add_data(dict_item)
 
-		index = self._history.index_of_unique(dict_item, self._history.keys.url)
+		index = self._history.index_of_unique(dict_item, History.Keys.url)
 		if index is not None:
 			self._data.pop(index)
 			self._data.append(dict_item)
@@ -69,5 +71,5 @@ class HistoryTableModel(QAbstractTableModel):
 
 	def get_url(self, index):
 		assert index is not None
-		logging.debug(self._data[len(self._data) - index.row() - 1][self._history.keys.url])
-		return self._data[len(self._data) - index.row() - 1][self._history.keys.url]
+		logging.debug(self._data[len(self._data) - index.row() - 1][History.Keys.url])
+		return self._data[len(self._data) - index.row() - 1][History.Keys.url]

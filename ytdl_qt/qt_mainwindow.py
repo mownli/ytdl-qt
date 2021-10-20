@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 from ytdl_qt.history import History
 from ytdl_qt.qt_historytablemodel import HistoryTableModel
 from ytdl_qt.qt_mainwindow_form import Ui_MainWindow
-from ytdl_qt.ytdl import Ytdl
+from ytdl_qt.ytdl_info import Info
 from ytdl_qt.paths import Paths
 from ytdl_qt.core import Core, Callbacks
 from ytdl_qt.settings import Settings
@@ -83,7 +83,7 @@ class MainWindow(QMainWindow):
 		logging.debug('History loaded')
 
 		self.url_from_stdin = None
-		if url is not None:
+		if url:
 			# Slot is called after the window is shown
 			QTimer.singleShot(0, self.get_info_auto)
 			self.url_from_stdin = url
@@ -94,11 +94,11 @@ class MainWindow(QMainWindow):
 		self.ui.infoTableWidget.clearContents()
 		self.ui.infoTableWidget.setRowCount(len(fmt_list))
 		for index, item in enumerate(fmt_list):
-			self.ui.infoTableWidget.setItem(index, 0, QTableWidgetItem(item[Ytdl.Keys.id]))
-			self.ui.infoTableWidget.setItem(index, 1, QTableWidgetItem(item[Ytdl.Keys.vcodec]))
-			self.ui.infoTableWidget.setItem(index, 2, QTableWidgetItem(item[Ytdl.Keys.acodec]))
-			self.ui.infoTableWidget.setItem(index, 3, QTableWidgetItem(item[Ytdl.Keys.dimensions]))
-			self.ui.infoTableWidget.setItem(index, 4, QTableWidgetItem(item[Ytdl.Keys.size]))
+			self.ui.infoTableWidget.setItem(index, 0, QTableWidgetItem(item[Info.Keys.id]))
+			self.ui.infoTableWidget.setItem(index, 1, QTableWidgetItem(item[Info.Keys.vcodec]))
+			self.ui.infoTableWidget.setItem(index, 2, QTableWidgetItem(item[Info.Keys.acodec]))
+			self.ui.infoTableWidget.setItem(index, 3, QTableWidgetItem(item[Info.Keys.dimensions]))
+			self.ui.infoTableWidget.setItem(index, 4, QTableWidgetItem(item[Info.Keys.size]))
 
 	def lock_ui(self):
 		self.disconnect_history_widget()

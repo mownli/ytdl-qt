@@ -4,7 +4,7 @@ setup(
     name='ytdl_qt',
     version='1.0',
     packages=find_packages(),
-    install_requires=['PyQt5', 'pyperclip', 'youtube_dl'],
+    install_requires=['PyQt5', 'pyperclip', 'yt-dlp'],
     url='',
     license='',
     author='gyro',
