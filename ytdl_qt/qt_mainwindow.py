@@ -58,16 +58,16 @@ class MainWindow(QMainWindow):
 
 		self.settings = Settings()
 
-		if not self.settings.ffmpeg_path.current:
-			self.msg_box = QMessageBox(self.w)
-			self.msg_box.setIcon(QMessageBox.Warning)
-			self.msg_box.setText('Couldn\'t locate FFmpeg binary. Set the path in the settings tab')
-
-			def delete_box():
-				del self.msg_box
-
-			self.msg_box.finished.connect(delete_box)
-			self.msg_box.open()
+		# if not self.settings.ffmpeg_path.current:
+		# 	self.msg_box = QMessageBox(self)
+		# 	self.msg_box.setIcon(QMessageBox.Warning)
+		# 	self.msg_box.setText('Couldn\'t locate FFmpeg binary. Set the path in the settings tab')
+		#
+		# 	def delete_box():
+		# 		del self.msg_box
+		#
+		# 	self.msg_box.finished.connect(delete_box)
+		# 	self.msg_box.open()
 
 		self.ui.ffmpegPathEdit.setText(self.settings.ffmpeg_path.current)
 		self.ui.playerPathEdit.setText(self.settings.player_path.current)
@@ -318,8 +318,9 @@ class MainWindow(QMainWindow):
 				self.core.download_with_ytdl()
 			elif self.ui.ffmpegRadio.isChecked():
 				self.core.download_with_ffmpeg()
-			elif self.ui.aria2Radio.isChecked():
-				self.core.download_with_aria2()
+			# elif self.ui.aria2Radio.isChecked():
+			# 	self.core.download_with_aria2()
+
 		except Exception as e:
 			self.error_dialog_exec('Download Error', str(e))
 			self.unlock_ui()

@@ -31,6 +31,8 @@ class FfmpegSetting(Setting):
 				raise Exception('Inappropriate name of the FFmpeg executable')
 			else:
 				super().set(arg)
+		else:
+			super().set('')
 
 
 class Settings:

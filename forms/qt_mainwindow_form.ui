@@ -79,16 +79,6 @@
                    </property>
                   </widget>
                  </item>
-                 <item>
-                  <widget class="QRadioButton" name="aria2Radio">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="text">
-                    <string>aria2</string>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </widget>
               </item>
