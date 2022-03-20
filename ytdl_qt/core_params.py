@@ -2,6 +2,7 @@ class CoreParams:
 
     def __init__(self):
         self.player_path = None
+        self.download_dir = None
         self.player_params = None
         self.ffmpeg_path = None
         self.file_for_playback = None

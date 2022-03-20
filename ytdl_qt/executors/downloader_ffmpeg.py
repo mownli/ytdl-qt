@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 import subprocess
 import threading
 
@@ -28,7 +29,7 @@ class DownloaderFfmpeg(DownloaderAbstract):
 		self._setup_ui()
 
 		#path, ext = self.ytdl_info.get_filename()
-		path = self.ytdl_info.get_filename()
+		path = os.path.join(self.params.download_dir, self.ytdl_info.get_filename())
 		ext = '.mkv'
 		filepath = ''.join([path, ext])
 

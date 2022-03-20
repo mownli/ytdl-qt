@@ -55,7 +55,7 @@ class Core(Callbacks):
 		self.params.ytdl_params = {
 			'noplaylist': True,
 			'quiet': True,
-			'concurrent_fragments': os.cpu_count()  # Probably doesn't work
+			'concurrent_fragments': os.cpu_count(),  # Probably doesn't work
 		}
 
 	def download_info(self, url: str) -> None:
@@ -92,6 +92,7 @@ class Core(Callbacks):
 
 	def download_target(self, d_type: DownloaderType) -> None:
 		"""Run selected downloader."""
+
 		if d_type is self.DownloaderType.YTDL:
 			self.downloader = DownloaderYtdl(self.params, self.ytdl_info)
 		elif d_type is self.DownloaderType.FFMPEG:
@@ -144,6 +145,10 @@ class Core(Callbacks):
 	def set_ffmpeg_path(self, path: str) -> None:
 		logging.debug(f'Setting ffmpeg path: {path}')
 		self.params.ffmpeg_path = path
+
+	def set_download_dir(self, path: str) -> None:
+		logging.debug(f'Setting download directory: {path}')
+		self.params.download_dir = path
 
 	def set_player_path(self, path: str) -> None:
 		logging.debug(f'Setting player path: {path}')

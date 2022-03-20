@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 import pkgutil
 import re
 import shlex
@@ -70,6 +71,7 @@ class MainWindow(QMainWindow):
 		# 	self.msg_box.open()
 
 		self.ui.ffmpegPathEdit.setText(self.settings.ffmpeg_path.current)
+		self.ui.downloadDirEdit.setText(self.settings.download_dir.current)
 		self.ui.playerPathEdit.setText(self.settings.player_path.current)
 		self.ui.playerParamsEdit.setText(self.settings.player_params.current)
 		self.set_settings_core()
@@ -146,6 +148,7 @@ class MainWindow(QMainWindow):
 	# Settings stuff
 	def set_settings_core(self):
 		self.core.set_ffmpeg_path(self.settings.ffmpeg_path.current)
+		self.core.set_download_dir(self.settings.download_dir.current)
 		self.core.set_player_path(self.settings.player_path.current)
 		self.core.set_player_params(shlex.split(self.settings.player_params.current))
 
@@ -157,10 +160,11 @@ class MainWindow(QMainWindow):
 	def commit_settings(self):
 		try:
 			self.settings.ffmpeg_path.set(self.ui.ffmpegPathEdit.text().strip())
+			self.settings.download_dir.set(self.ui.downloadDirEdit.text().strip())
 			self.settings.player_path.set(self.ui.playerPathEdit.text().strip())
 			self.settings.player_params.set(self.ui.playerParamsEdit.text().strip())
 		except Exception as e:
-			self.error_dialog_exec('FFmpeg', str(e))
+			self.error_dialog_exec('Settings', str(e))
 			return
 		self.settings.save()
 
@@ -170,6 +174,7 @@ class MainWindow(QMainWindow):
 
 	def undo_settings(self):
 		self.ui.ffmpegPathEdit.setText(self.settings.ffmpeg_path.current)
+		self.ui.downloadDirEdit.setText(self.settings.download_dir.current)
 		self.ui.playerPathEdit.setText(self.settings.player_path.current)
 		self.ui.playerParamsEdit.setText(self.settings.player_params.current)
 
@@ -188,12 +193,18 @@ class MainWindow(QMainWindow):
 			self.enable_apply_and_cancel_buttons()
 
 	def filepicker(self):
-		d = QFileDialog(caption='Provide path to the executable')
+		d = QFileDialog(parent=self, caption='Provide path to the executable')
 		if d.exec_():
 			path = d.selectedFiles()[0]
 			return path
 		else:
 			return None
+
+	def pick_download_dir(self):
+		path = QFileDialog.getExistingDirectory(parent=self, caption='Provide path to the directory')
+		if path:
+			self.ui.downloadDirEdit.setText(path)
+			self.enable_apply_and_cancel_buttons()
 
 	def connect_signals(self):
 		self.ui.getInfoButton.clicked.connect(self.getInfoButton_clicked)
@@ -210,10 +221,12 @@ class MainWindow(QMainWindow):
 		self.connect_history_widget()
 
 		self.ui.ffmpegPathEdit.textEdited.connect(self.enable_apply_and_cancel_buttons)
+		self.ui.downloadDirEdit.textEdited.connect(self.enable_apply_and_cancel_buttons)
 		self.ui.playerPathEdit.textEdited.connect(self.enable_apply_and_cancel_buttons)
 		self.ui.playerParamsEdit.textEdited.connect(self.enable_apply_and_cancel_buttons)
 
 		self.ui.ffmpegPathButton.clicked.connect(self.pick_exe_ffmpeg)
+		self.ui.downloadDirButton.clicked.connect(self.pick_download_dir)
 		self.ui.playerPathButton.clicked.connect(self.pick_exe_player)
 
 		self.ui.applyChangesButton.clicked.connect(self.commit_settings)
@@ -225,7 +238,7 @@ class MainWindow(QMainWindow):
 		core.set_progress_max_cb = self.set_progressBar_max
 		core.set_progress_val_cb = self.set_progressBar_val
 		core.show_msg_cb = self.show_status_msg
-		#core.redraw_cb = self.redraw
+		core.redraw_cb = self.redraw
 
 	def download_info(self, url: str):
 		"""
@@ -314,6 +327,13 @@ class MainWindow(QMainWindow):
 				self.window_title + ' :: Downloading :: ' + self.core.get_title()
 			)
 			self.lock_ui()
+
+			# Check download directory
+			if self.core.params.download_dir:
+				os.makedirs(self.core.params.download_dir, exist_ok=True)
+				if not os.access(self.core.params.download_dir, mode=os.W_OK):
+					raise Exception('No permission to write to that directory')
+
 			if self.ui.ytdlRadio.isChecked():
 				self.core.download_with_ytdl()
 			elif self.ui.ffmpegRadio.isChecked():

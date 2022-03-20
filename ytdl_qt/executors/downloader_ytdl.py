@@ -2,6 +2,7 @@
 
 import datetime
 import logging
+import os
 import threading
 from math import floor
 import copy
@@ -29,6 +30,7 @@ class DownloaderYtdl(DownloaderAbstract):
 		self.params.ytdl_params.update({
 			Info.Keys.format_requested: self.ytdl_info.get_format_str(params.fmt_id_selection),
 			Info.Keys.hooks: [self.ytdl_processing_hook],
+			'outtmpl': os.path.join(self.params.download_dir, '%(title)s.%(ext)s'),
 		})
 
 	def _setup_ui(self):
@@ -53,6 +55,8 @@ class DownloaderYtdl(DownloaderAbstract):
 
 		self._monitor = threading.Thread(target=self._do, daemon=True)
 		self._monitor.start()
+		# Or if we don't want parallelism:
+		# self._do()
 
 	def download_cancel(self):
 		self._cancel_flag = True
@@ -65,7 +69,7 @@ class DownloaderYtdl(DownloaderAbstract):
 		logging.debug('Entered hook')
 		if self._cancel_flag:
 			raise self.Cancelled
-		self.update_ui_cb()
+		#self.update_ui_cb()
 		# Status dictionary
 		if d[Info.Keys.status] == Info.Keys.downloading:
 			total_str = ''
@@ -90,7 +94,7 @@ class DownloaderYtdl(DownloaderAbstract):
 			logging.debug('Hook status = finished')
 			self._download_ct -=  1
 			if self._download_ct == 0:
-				self.file_ready_for_playback_cb(d[Info.Keys.filename])
+				self.file_ready_for_playback_cb(os.path.join(self.params.download_dir, d[Info.Keys.filename]))
 				self.send_msg_cb('Download Finished')
 				self.finished_cb(self)
 
