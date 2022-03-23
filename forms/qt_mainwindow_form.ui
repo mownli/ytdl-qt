@@ -25,127 +25,7 @@
         <string>Download/Stream</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="1" column="1">
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="1" column="0">
-         <widget class="QWidget" name="taskWidget" native="true">
-          <layout class="QHBoxLayout" name="horizontalLayout_4">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QGroupBox" name="dloadBox">
-             <property name="title">
-              <string>Download</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_2">
-              <item row="0" column="0">
-               <widget class="QWidget" name="dloadersRadio" native="true">
-                <layout class="QVBoxLayout" name="radioLayout">
-                 <item>
-                  <widget class="QRadioButton" name="ytdlRadio">
-                   <property name="text">
-                    <string>ytdl</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QRadioButton" name="ffmpegRadio">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="text">
-                    <string>ffmpeg</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <layout class="QVBoxLayout" name="dloadButtonsLayout">
-                <item>
-                 <widget class="QPushButton" name="downloadButton">
-                  <property name="enabled">
-                   <bool>false</bool>
-                  </property>
-                  <property name="text">
-                   <string>Download</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="cancelButton">
-                  <property name="enabled">
-                   <bool>false</bool>
-                  </property>
-                  <property name="text">
-                   <string>Cancel</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QGroupBox" name="streamBox">
-             <property name="title">
-              <string>Playback</string>
-             </property>
-             <layout class="QHBoxLayout" name="horizontalLayout">
-              <item>
-               <layout class="QVBoxLayout" name="verticalLayout_4">
-                <item>
-                 <widget class="QPushButton" name="streamButton">
-                  <property name="enabled">
-                   <bool>false</bool>
-                  </property>
-                  <property name="text">
-                   <string>Stream</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="playButton">
-                  <property name="enabled">
-                   <bool>false</bool>
-                  </property>
-                  <property name="text">
-                   <string>Play File</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="2">
+        <item row="0" column="0" colspan="3">
          <widget class="QWidget" name="infoWidget" native="true">
           <layout class="QGridLayout" name="infoLayout">
            <property name="leftMargin">
@@ -240,6 +120,61 @@
                <string>size</string>
               </property>
              </column>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="dloadBox">
+          <property name="title">
+           <string>Backend</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_2">
+           <item row="1" column="1">
+            <widget class="QRadioButton" name="ffmpegRadio">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>ffmpeg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QRadioButton" name="ytdlRadio">
+             <property name="text">
+              <string>ytdl</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="1" colspan="2">
+         <widget class="QGroupBox" name="streamBox">
+          <property name="title">
+           <string>Controls</string>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <item>
+            <widget class="QPushButton" name="downloadButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Download</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="streamButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Stream</string>
+             </property>
             </widget>
            </item>
           </layout>

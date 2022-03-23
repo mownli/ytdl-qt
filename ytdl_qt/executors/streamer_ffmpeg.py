@@ -113,7 +113,6 @@ class StreamerFfmpeg(StreamerAbstract):
 		except Exception as e:
 			self.send_msg_cb('Streaming error')
 			self.error = str(e)
-		self.finished_cb(self)
 
 	# def _stream_finish(self):
 		# Relies on QProcess

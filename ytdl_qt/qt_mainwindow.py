@@ -84,6 +84,9 @@ class MainWindow(QMainWindow):
 		self.ui.historyView.setModel(HistoryTableModel(History(Paths.get_history_path())))
 		logging.debug('History loaded')
 
+		self.download_button_text = self.ui.downloadButton.text()
+		self.download_button_status = True
+
 		self.url_from_stdin = None
 		if url:
 			# Slot is called after the window is shown
@@ -106,17 +109,15 @@ class MainWindow(QMainWindow):
 		self.disconnect_history_widget()
 		self.ui.urlEdit.setDisabled(True)
 		self.ui.getInfoButton.setDisabled(True)
-		self.ui.cancelButton.setEnabled(True)
+		self.progressBar.reset()
 		self.progressBar.setVisible(True)
-		self.ui.downloadButton.setDisabled(True)
-		self.ui.playButton.setDisabled(True)
 
 	def unlock_ui(self):
 		self.connect_history_widget()
 		self.infoTableWidget_selectionChanged_slot()
 		self.ui.urlEdit.setEnabled(True)
 		self.urlEdit_textChanged()
-		self.ui.cancelButton.setDisabled(True)
+		self.progressBar.reset()
 		self.progressBar.setVisible(False)
 
 	def history_add_item(self, title: str, url: str):
@@ -210,10 +211,8 @@ class MainWindow(QMainWindow):
 		self.ui.getInfoButton.clicked.connect(self.getInfoButton_clicked)
 		self.ui.urlEdit.textChanged.connect(self.urlEdit_textChanged)
 		self.ui.downloadButton.clicked.connect(self.downloadButton_clicked)
-		self.ui.cancelButton.clicked.connect(self.cancelButton_clicked)
 		self.ui.streamButton.clicked.connect(self.streamButton_clicked)
 		self.ui.infoTableWidget.itemDoubleClicked.connect(self.streamButton_clicked)
-		self.ui.playButton.clicked.connect(self.playButton_clicked)
 		self.ui.infoTableWidget.itemSelectionChanged.connect(
 			self.infoTableWidget_selectionChanged_slot
 		)
@@ -234,7 +233,6 @@ class MainWindow(QMainWindow):
 
 	def set_core_callbacks(self, core: Callbacks):
 		core.task_finished_cb = self.task_finish
-		core.playback_enabled_cb = self.play_set_enabled
 		core.set_progress_max_cb = self.set_progressBar_max
 		core.set_progress_val_cb = self.set_progressBar_val
 		core.show_msg_cb = self.show_status_msg
@@ -254,7 +252,6 @@ class MainWindow(QMainWindow):
 			self.core.download_info(url)
 
 			self.update_table(self.core.get_info())
-			self.ui.playButton.setEnabled(False)
 			self.setWindowTitle(self.window_title + ' :: ' + self.core.get_title())
 			self.show_status_msg('Info loaded')
 
@@ -274,6 +271,17 @@ class MainWindow(QMainWindow):
 		if not self.history_widget_connected:
 			self.ui.historyView.doubleClicked.connect(self.history_item_clicked)
 			self.history_widget_connected = True
+
+	def swap_d_s_buttons(self):
+		if self.download_button_status:
+			self.ui.downloadButton.clicked.disconnect(self.downloadButton_clicked)
+			self.ui.downloadButton.clicked.connect(self.cancelButton_clicked)
+			self.ui.downloadButton.setText('Stop')
+		else:
+			self.ui.downloadButton.clicked.disconnect(self.cancelButton_clicked)
+			self.ui.downloadButton.clicked.connect(self.downloadButton_clicked)
+			self.ui.downloadButton.setText(self.download_button_text)
+		self.download_button_status = not self.download_button_status
 
 	@pyqtSlot()
 	def get_info_auto(self):
@@ -326,6 +334,7 @@ class MainWindow(QMainWindow):
 			self.setWindowTitle(
 				self.window_title + ' :: Downloading :: ' + self.core.get_title()
 			)
+			self.swap_d_s_buttons()
 			self.lock_ui()
 
 			# Check download directory
@@ -343,6 +352,7 @@ class MainWindow(QMainWindow):
 
 		except Exception as e:
 			self.error_dialog_exec('Download Error', str(e))
+			self.swap_d_s_buttons()
 			self.unlock_ui()
 
 	@pyqtSlot()
@@ -365,22 +375,7 @@ class MainWindow(QMainWindow):
 		except Exception as e:
 			self.error_dialog_exec('Stream Error', str(e))
 
-	@pyqtSlot()
-	def playButton_clicked(self):
-		"""Start playback of the last downloaded file."""
-		try:
-			self.core.play_target()
-		except Exception as e:
-			self.error_dialog_exec('Error', str(e))
-
 	# Asynchronous callbacks
-	def play_set_enabled(self):
-		self.metaObject().invokeMethod(
-			self.ui.playButton,
-			self.ui.playButton.setEnabled.__name__,
-			Qt.QueuedConnection,
-			Q_ARG(bool, bool(self.settings.player_path.current)))
-
 	def task_finish(self, signal: Tuple[bool, str]):
 		success, error_str = signal
 		if not success:
@@ -391,6 +386,7 @@ class MainWindow(QMainWindow):
 	def _task_finish_helper(self):
 		self.set_alert()
 		self.setWindowTitle(self.window_title + ' :: ' + self.core.get_title())
+		self.swap_d_s_buttons()
 		self.unlock_ui()
 
 	def redraw(self):
