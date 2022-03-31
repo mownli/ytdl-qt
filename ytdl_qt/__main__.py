@@ -21,8 +21,12 @@ def main():
 		logging.getLogger().setLevel(level='DEBUG')
 
 	app = QApplication(sys.argv)
-	w = MainWindow(args.url)
+
+	w = MainWindow()
 	w.show()
+	if args.url:
+		w.ui.urlEdit.setText(args.url)
+		w.download_info(args.url)
 
 	sys.exit(app.exec())
 

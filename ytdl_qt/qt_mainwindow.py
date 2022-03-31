@@ -7,7 +7,7 @@ import re
 import shlex
 from typing import List, Tuple
 
-from PyQt5.QtCore import Qt, pyqtSlot, QTimer, Q_ARG, QModelIndex
+from PyQt5.QtCore import Qt, pyqtSlot, Q_ARG, QModelIndex
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import (
 	QMainWindow,
@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
 	# For clearing ANSI stuff from exception messages
 	ansi_esc = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
-	def __init__(self, url=None):
+	def __init__(self):
 		super().__init__()
 		self.ui = Ui_MainWindow()
 		self.ui.setupUi(self)
@@ -86,13 +86,6 @@ class MainWindow(QMainWindow):
 
 		self.download_button_text = self.ui.downloadButton.text()
 		self.download_button_status = True
-
-		self.url_from_stdin = None
-		if url:
-			# Slot is called after the window is shown
-			QTimer.singleShot(0, self.get_info_auto)
-			self.url_from_stdin = url
-			self.ui.urlEdit.setText(self.url_from_stdin)
 
 	def update_table(self, fmt_list: List[str]):
 		"""Update table contents."""
@@ -282,11 +275,6 @@ class MainWindow(QMainWindow):
 			self.ui.downloadButton.clicked.connect(self.downloadButton_clicked)
 			self.ui.downloadButton.setText(self.download_button_text)
 		self.download_button_status = not self.download_button_status
-
-	@pyqtSlot()
-	def get_info_auto(self):
-		"""For a timer during instantiation."""
-		self.download_info(self.url_from_stdin)
 
 	@pyqtSlot()
 	def getInfoButton_clicked(self):
